@@ -12,12 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -39,24 +36,17 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel(), modifier: Modifier 
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StatsContent(
     modifier: Modifier = Modifier,
     todoStats: TodoStatsDto?,
     itemStats: ItemStatsDto?
 ) {
-    Scaffold(
-        modifier = modifier,
-        topBar = { TopAppBar(title = { Text("Stats") }) }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
             // ── Todos section ──────────────────────────────────────────
             item {
                 SectionHeader(title = "Todos")
@@ -133,7 +123,6 @@ private fun StatsContent(
                 }
             }
         }
-    }
 }
 
 @Composable

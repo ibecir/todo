@@ -2,14 +2,19 @@ package com.example.todo.presentation.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -24,8 +29,9 @@ import com.example.todo.presentation.view_model.items.ItemsViewModel
 import com.example.todo.presentation.view_model.stats.StatsViewModel
 import com.example.todo.presentation.view_model.todos.TodosViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(username: String?, onLogout: () -> Unit) {
     val todosViewModel: TodosViewModel = hiltViewModel()
     val itemsViewModel: ItemsViewModel = hiltViewModel()
     val statsViewModel: StatsViewModel = hiltViewModel()
@@ -33,6 +39,31 @@ fun MainScreen() {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        when (selectedTab) {
+                            0 -> "My Todos"
+                            1 -> "Items"
+                            else -> "Stats"
+                        }
+                    )
+                },
+                actions = {
+                    if (username != null) {
+                        Text(
+                            text = username,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = onLogout) {
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout")
+                    }
+                }
+            )
+        },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(

@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.example.todo.model.local.TodoDatabase
 import com.example.todo.model.local.dao.ItemDao
 import com.example.todo.model.local.dao.TodoDao
+import com.example.todo.model.local.dao.UserDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -31,4 +32,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideItemDao(db: TodoDatabase): ItemDao = db.itemDao()
+
+    @Provides
+    @Singleton
+    fun provideUserDao(db: TodoDatabase): UserDao = db.userDao()
 }
