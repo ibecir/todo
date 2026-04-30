@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.example.todo.model.dto.TodoStatsDto
 import com.example.todo.model.local.entity.TodoEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -23,4 +24,16 @@ interface TodoDao {
 
     @Delete
     suspend fun delete(todo: TodoEntity)
+
+    @Query("SELECT * FROM todos WHERE id = :todoId")
+    fun getTodoById(todoId: Int): Flow<TodoEntity?>
+
+    @Query("""
+        SELECT
+            COUNT(*) AS totalCount,
+            SUM(CASE WHEN isCompleted = 1 THEN 1 ELSE 0 END) AS completedCount,
+            SUM(CASE WHEN isCompleted = 0 THEN 1 ELSE 0 END) AS pendingCount
+        FROM todos
+    """)
+    fun getTodoStats(): Flow<TodoStatsDto>
 }

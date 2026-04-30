@@ -39,6 +39,12 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
+    fun onTodoClick(todo: TodoEntity) {
+        viewModelScope.launch {
+            _navigationEvent.send(TodoListNavigationEvent.NavigateToDetail(todo.id))
+        }
+    }
+
     fun onToggleComplete(todo: TodoEntity) {
         viewModelScope.launch {
             repository.update(todo.copy(isCompleted = !todo.isCompleted))

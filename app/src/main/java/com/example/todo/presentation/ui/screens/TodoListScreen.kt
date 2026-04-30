@@ -1,5 +1,6 @@
 package com.example.todo.presentation.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,7 +41,8 @@ import com.example.todo.presentation.view_model.list.TodoListViewModel
 @Composable
 fun TodoListScreen(
     viewModel: TodoListViewModel = hiltViewModel(),
-    onNavigateToAdd: () -> Unit
+    onNavigateToAdd: () -> Unit,
+    onNavigateToDetail: (Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -48,6 +50,7 @@ fun TodoListScreen(
         viewModel.navigationEvent.collect { event ->
             when (event) {
                 TodoListNavigationEvent.NavigateToAdd -> onNavigateToAdd()
+                is TodoListNavigationEvent.NavigateToDetail -> onNavigateToDetail(event.todoId)
             }
         }
     }
@@ -62,6 +65,7 @@ fun TodoListScreen(
         is TodoListUiState.Success -> TodoListContent(
             todos = state.todos,
             onAddClick = viewModel::onAddClick,
+            onTodoClick = viewModel::onTodoClick,
             onToggleComplete = viewModel::onToggleComplete,
             onDelete = viewModel::onDelete
         )
@@ -73,6 +77,7 @@ fun TodoListScreen(
 private fun TodoListContent(
     todos: List<TodoEntity>,
     onAddClick: () -> Unit,
+    onTodoClick: (TodoEntity) -> Unit,
     onToggleComplete: (TodoEntity) -> Unit,
     onDelete: (TodoEntity) -> Unit
 ) {
@@ -110,6 +115,7 @@ private fun TodoListContent(
                 items(todos, key = { it.id }) { todo ->
                     TodoItem(
                         todo = todo,
+                        onClick = { onTodoClick(todo) },
                         onToggleComplete = { onToggleComplete(todo) },
                         onDelete = { onDelete(todo) }
                     )
@@ -122,10 +128,15 @@ private fun TodoListContent(
 @Composable
 private fun TodoItem(
     todo: TodoEntity,
+    onClick: () -> Unit,
     onToggleComplete: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
