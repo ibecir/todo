@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todo.model.local.entity.ItemEntity
 import com.example.todo.model.repository.ItemRepository
+import com.example.todo.model.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,17 +13,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import android.util.Log
+
 @HiltViewModel
 class ItemsViewModel @Inject constructor(
-    private val itemRepository: ItemRepository
+    private val itemRepository: ItemRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ItemsUiState())
     val uiState: StateFlow<ItemsUiState> = _uiState.asStateFlow()
 
     init {
+        Log.d("ItemsViewModel", "Init called with loggedInUserId: ${sessionManager.loggedInUserId}")
         viewModelScope.launch {
-            itemRepository.allItems.collect { items ->
+            itemRepository.getAllItems(sessionManager.loggedInUserId).collect { items ->
+                Log.d("ItemsViewModel", "Collected items: ${items.size}")
                 _uiState.update { it.copy(items = items) }
             }
         }
@@ -51,7 +57,13 @@ class ItemsViewModel @Inject constructor(
                 )
             } else {
                 itemRepository.insert(
-                    ItemEntity(name = name.trim(), description = description.trim(), createdAt = now, updatedAt = now)
+                    ItemEntity(
+                        userId = sessionManager.loggedInUserId,
+                        name = name.trim(),
+                        description = description.trim(),
+                        createdAt = now,
+                        updatedAt = now
+                    )
                 )
             }
         }

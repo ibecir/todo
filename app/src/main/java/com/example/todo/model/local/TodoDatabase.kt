@@ -12,7 +12,7 @@ import com.example.todo.model.local.entity.UserEntity
 
 @Database(
     entities = [TodoEntity::class, ItemEntity::class, TodoItemCrossRef::class, UserEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class TodoDatabase : RoomDatabase() {

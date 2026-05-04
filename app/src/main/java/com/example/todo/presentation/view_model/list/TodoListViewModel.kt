@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todo.model.local.entity.TodoEntity
 import com.example.todo.model.repository.TodoRepository
+import com.example.todo.model.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TodoListViewModel @Inject constructor(
-    private val repository: TodoRepository
+    private val repository: TodoRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<TodoListUiState>(TodoListUiState.Loading)
@@ -27,7 +29,7 @@ class TodoListViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.todos.collect { todos ->
+            repository.getTodos(sessionManager.loggedInUserId).collect { todos ->
                 _uiState.value = TodoListUiState.Success(todos)
             }
         }

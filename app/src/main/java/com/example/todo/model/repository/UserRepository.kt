@@ -18,8 +18,8 @@ class UserRepository @Inject constructor(
         if (existing != null) {
             return Result.failure(IllegalArgumentException("Username already taken"))
         }
-        userDao.insert(UserEntity(username = username, password = password))
-        sessionManager.saveSession(username)
+        val userId = userDao.insert(UserEntity(username = username, password = password)).toInt()
+        sessionManager.saveSession(userId, username)
         return Result.success(Unit)
     }
 
@@ -32,7 +32,7 @@ class UserRepository @Inject constructor(
         if (user.password != password) {
             return Result.failure(IllegalArgumentException("Incorrect password"))
         }
-        sessionManager.saveSession(username)
+        sessionManager.saveSession(user.id, username)
         return Result.success(Unit)
     }
 }

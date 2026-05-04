@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class TodoRepository @Inject constructor(private val todoDao: TodoDao) {
-    val todos: Flow<List<TodoEntity>> = todoDao.getAllTodos()
-    val todoStats: Flow<TodoStatsDto> = todoDao.getTodoStats()
+    fun getTodos(userId: Int): Flow<List<TodoEntity>> = todoDao.getAllTodos(userId)
+    fun getTodoStats(userId: Int): Flow<TodoStatsDto> = todoDao.getTodoStats(userId)
 
     suspend fun insert(todo: TodoEntity) = todoDao.insert(todo)
 
@@ -16,5 +16,5 @@ class TodoRepository @Inject constructor(private val todoDao: TodoDao) {
 
     suspend fun delete(todo: TodoEntity) = todoDao.delete(todo)
 
-    fun getTodoById(todoId: Int): Flow<TodoEntity?> = todoDao.getTodoById(todoId)
+    fun getTodoById(todoId: Int, userId: Int): Flow<TodoEntity?> = todoDao.getTodoById(todoId, userId)
 }

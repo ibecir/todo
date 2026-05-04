@@ -10,8 +10,11 @@ import com.example.todo.model.local.entity.UserEntity
 interface UserDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insert(user: UserEntity)
+    suspend fun insert(user: UserEntity): Long
 
     @Query("SELECT * FROM users WHERE username = :username LIMIT 1")
     suspend fun findByUsername(username: String): UserEntity?
+
+    @Query("SELECT * FROM users WHERE id = :userId LIMIT 1")
+    suspend fun findById(userId: Int): UserEntity?
 }

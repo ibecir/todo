@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todo.model.local.entity.ItemEntity
 import com.example.todo.model.repository.ItemRepository
+import com.example.todo.model.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -18,7 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ItemFormViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val itemRepository: ItemRepository
+    private val itemRepository: ItemRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val todoId: Int = checkNotNull(savedStateHandle["todoId"])
@@ -33,7 +35,7 @@ class ItemFormViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val existing = if (isEditing) itemRepository.getItemById(itemId) else null
+            val existing = if (isEditing) itemRepository.getItemById(itemId, sessionManager.loggedInUserId) else null
             _uiState.value = ItemFormUiState.Ready(existing)
         }
     }
@@ -45,7 +47,7 @@ class ItemFormViewModel @Inject constructor(
             val now = System.currentTimeMillis()
             if (isEditing) {
                 val existing = (_uiState.value as? ItemFormUiState.Ready)?.existingItem
-                    ?: itemRepository.getItemById(itemId)
+                    ?: itemRepository.getItemById(itemId, sessionManager.loggedInUserId)
                     ?: return@launch
                 itemRepository.update(
                     existing.copy(
@@ -57,6 +59,7 @@ class ItemFormViewModel @Inject constructor(
             } else {
                 val newId = itemRepository.insert(
                     ItemEntity(
+                        userId = sessionManager.loggedInUserId,
                         name = name.trim(),
                         description = description.trim(),
                         createdAt = now,

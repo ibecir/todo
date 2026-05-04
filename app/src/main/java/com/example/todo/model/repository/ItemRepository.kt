@@ -9,12 +9,12 @@ import javax.inject.Inject
 
 class ItemRepository @Inject constructor(private val itemDao: ItemDao) {
 
-    val allItems: Flow<List<ItemEntity>> = itemDao.getAllItems()
-    val itemStats: Flow<ItemStatsDto> = itemDao.getItemStats()
+    fun getAllItems(userId: Int): Flow<List<ItemEntity>> = itemDao.getAllItems(userId)
+    fun getItemStats(userId: Int): Flow<ItemStatsDto> = itemDao.getItemStats(userId)
 
     fun getItemsForTodo(todoId: Int): Flow<List<ItemEntity>> = itemDao.getItemsForTodo(todoId)
 
-    suspend fun getItemById(itemId: Int): ItemEntity? = itemDao.getItemById(itemId)
+    suspend fun getItemById(itemId: Int, userId: Int): ItemEntity? = itemDao.getItemById(itemId, userId)
 
     suspend fun insert(item: ItemEntity): Long = itemDao.insert(item)
 

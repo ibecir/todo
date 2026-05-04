@@ -6,6 +6,7 @@ import com.example.todo.model.local.entity.ItemEntity
 import com.example.todo.model.local.entity.TodoEntity
 import com.example.todo.model.repository.ItemRepository
 import com.example.todo.model.repository.TodoRepository
+import com.example.todo.model.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,10 +17,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import android.util.Log
+
 @HiltViewModel
 class TodosViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
-    private val itemRepository: ItemRepository
+    private val itemRepository: ItemRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TodosUiState())
@@ -28,8 +32,10 @@ class TodosViewModel @Inject constructor(
     private val _selectedTodoId = MutableStateFlow<Int?>(null)
 
     init {
+        Log.d("TodosViewModel", "Init called with loggedInUserId: ${sessionManager.loggedInUserId}")
         viewModelScope.launch {
-            todoRepository.todos.collect { todos ->
+            todoRepository.getTodos(sessionManager.loggedInUserId).collect { todos ->
+                Log.d("TodosViewModel", "Collected todos: ${todos.size}")
                 _uiState.update { it.copy(
                     todos = todos,
                     selectedTodo = todos.find { t -> t.id == _selectedTodoId.value }
@@ -44,7 +50,7 @@ class TodosViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            itemRepository.allItems.collect { items ->
+            itemRepository.getAllItems(sessionManager.loggedInUserId).collect { items ->
                 _uiState.update { it.copy(allItems = items) }
             }
         }
@@ -80,7 +86,12 @@ class TodosViewModel @Inject constructor(
     fun onAddTodo(title: String) {
         if (title.isBlank()) return
         viewModelScope.launch {
-            todoRepository.insert(TodoEntity(title = title.trim()))
+            todoRepository.insert(
+                TodoEntity(
+                    title = title.trim(),
+                    userId = sessionManager.loggedInUserId
+                )
+            )
         }
         _uiState.update { it.copy(isAddTodoDialogOpen = false) }
     }

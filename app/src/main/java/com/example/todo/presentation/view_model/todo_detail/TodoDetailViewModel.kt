@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.todo.model.local.entity.ItemEntity
 import com.example.todo.model.repository.ItemRepository
 import com.example.todo.model.repository.TodoRepository
+import com.example.todo.model.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -21,7 +22,8 @@ import javax.inject.Inject
 class TodoDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val todoRepository: TodoRepository,
-    private val itemRepository: ItemRepository
+    private val itemRepository: ItemRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val todoId: Int = checkNotNull(savedStateHandle["todoId"])
@@ -35,7 +37,7 @@ class TodoDetailViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             combine(
-                todoRepository.getTodoById(todoId),
+                todoRepository.getTodoById(todoId, sessionManager.loggedInUserId),
                 itemRepository.getItemsForTodo(todoId)
             ) { todo, items ->
                 todo?.let { TodoDetailUiState.Success(it, items) } ?: TodoDetailUiState.Loading
