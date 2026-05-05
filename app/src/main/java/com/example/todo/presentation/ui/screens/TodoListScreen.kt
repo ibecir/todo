@@ -1,8 +1,12 @@
 package com.example.todo.presentation.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -33,6 +38,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.todo.model.dto.TagDto
 import com.example.todo.model.local.entity.TodoEntity
 import com.example.todo.presentation.view_model.list.TodoListNavigationEvent
 import com.example.todo.presentation.view_model.list.TodoListUiState
@@ -64,6 +70,7 @@ fun TodoListScreen(
         }
         is TodoListUiState.Success -> TodoListContent(
             todos = state.todos,
+            tags = state.tags,
             onAddClick = viewModel::onAddClick,
             onTodoClick = viewModel::onTodoClick,
             onToggleComplete = viewModel::onToggleComplete,
@@ -76,6 +83,7 @@ fun TodoListScreen(
 @Composable
 private fun TodoListContent(
     todos: List<TodoEntity>,
+    tags: List<TagDto>,
     onAddClick: () -> Unit,
     onTodoClick: (TodoEntity) -> Unit,
     onToggleComplete: (TodoEntity) -> Unit,
@@ -115,6 +123,7 @@ private fun TodoListContent(
                 items(todos, key = { it.id }) { todo ->
                     TodoItem(
                         todo = todo,
+                        tags = tags.filter { it.id in todo.tagIds },
                         onClick = { onTodoClick(todo) },
                         onToggleComplete = { onToggleComplete(todo) },
                         onDelete = { onDelete(todo) }
@@ -125,9 +134,11 @@ private fun TodoListContent(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TodoItem(
     todo: TodoEntity,
+    tags: List<TagDto>,
     onClick: () -> Unit,
     onToggleComplete: () -> Unit,
     onDelete: () -> Unit
@@ -145,19 +156,43 @@ private fun TodoItem(
                 checked = todo.isCompleted,
                 onCheckedChange = { onToggleComplete() }
             )
-            Text(
-                text = todo.title,
+            Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 8.dp),
-                style = if (todo.isCompleted)
-                    MaterialTheme.typography.bodyLarge.copy(
-                        textDecoration = TextDecoration.LineThrough,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
-                else
-                    MaterialTheme.typography.bodyLarge
-            )
+                    .padding(horizontal = 8.dp)
+            ) {
+                Text(
+                    text = todo.title,
+                    style = if (todo.isCompleted)
+                        MaterialTheme.typography.bodyLarge.copy(
+                            textDecoration = TextDecoration.LineThrough,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
+                    else
+                        MaterialTheme.typography.bodyLarge
+                )
+                if (tags.isNotEmpty()) {
+                    FlowRow(
+                        modifier = Modifier.padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        tags.forEach { tag ->
+                            Text(
+                                text = tag.name,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier
+                                    .background(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,

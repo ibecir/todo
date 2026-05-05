@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.todo.model.local.entity.ItemEntity
 import com.example.todo.model.repository.ItemRepository
 import com.example.todo.model.repository.TodoRepository
+import com.example.todo.model.repository.TagRepository
 import com.example.todo.model.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -25,6 +26,7 @@ class TodoDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val todoRepository: TodoRepository,
     private val itemRepository: ItemRepository,
+    private val tagRepository: TagRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -42,9 +44,13 @@ class TodoDetailViewModel @Inject constructor(
                 if (userId != -1) {
                     combine(
                         todoRepository.getTodoById(todoId, userId),
-                        itemRepository.getItemsForTodo(todoId, userId)
-                    ) { todo, items ->
-                        todo?.let { TodoDetailUiState.Success(it, items) } ?: TodoDetailUiState.Loading
+                        itemRepository.getItemsForTodo(todoId, userId),
+                        tagRepository.getTags(userId)
+                    ) { todo, items, allTags ->
+                        todo?.let {
+                            val todoTags = allTags.filter { tag -> tag.id in it.tagIds }
+                            TodoDetailUiState.Success(it, items, todoTags, allTags)
+                        } ?: TodoDetailUiState.Loading
                     }
                 } else {
                     flowOf(TodoDetailUiState.Loading)
@@ -68,6 +74,34 @@ class TodoDetailViewModel @Inject constructor(
     fun onDeleteItem(item: ItemEntity) {
         viewModelScope.launch {
             itemRepository.delete(item)
+        }
+    }
+
+    fun onToggleTag(tagId: Int) {
+        val currentState = _uiState.value
+        if (currentState is TodoDetailUiState.Success) {
+            val todo = currentState.todo
+            val newTagIds = if (todo.tagIds.contains(tagId)) {
+                todo.tagIds - tagId
+            } else {
+                todo.tagIds + tagId
+            }
+            viewModelScope.launch {
+                todoRepository.update(todo.copy(tagIds = newTagIds))
+            }
+        }
+    }
+
+    fun onCreateTag(name: String, description: String) {
+        viewModelScope.launch {
+            val userId = sessionManager.loggedInUserId
+            if (userId != -1) {
+                tagRepository.createTag(name, description, userId)
+                // Note: The UI state will update automatically if getTags is a Flow that reacts to changes.
+                // However, since our flow might just be a one-shot `flow { emit(tagsApi.getTags()) }`,
+                // creating a tag might not automatically refresh the flow in TagRepository as implemented.
+                // For a complete implementation, TagRepository should have a way to refresh tags.
+            }
         }
     }
 

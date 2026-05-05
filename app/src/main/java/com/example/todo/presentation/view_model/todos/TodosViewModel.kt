@@ -6,6 +6,7 @@ import com.example.todo.model.local.entity.ItemEntity
 import com.example.todo.model.local.entity.TodoEntity
 import com.example.todo.model.repository.ItemRepository
 import com.example.todo.model.repository.TodoRepository
+import com.example.todo.model.repository.TagRepository
 import com.example.todo.model.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,7 @@ import android.util.Log
 class TodosViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val itemRepository: ItemRepository,
+    private val tagRepository: TagRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -34,6 +36,13 @@ class TodosViewModel @Inject constructor(
 
     init {
         Log.d("TodosViewModel", "Init called")
+        viewModelScope.launch {
+            sessionManager.userId.flatMapLatest { userId ->
+                if (userId != -1) tagRepository.getTags(userId) else flowOf(emptyList())
+            }.collect { tags ->
+                _uiState.update { it.copy(tags = tags) }
+            }
+        }
         viewModelScope.launch {
             sessionManager.userId.flatMapLatest { userId ->
                 if (userId != -1) todoRepository.getTodos(userId) else flowOf(emptyList())
@@ -112,6 +121,27 @@ class TodosViewModel @Inject constructor(
     fun onToggleComplete(todo: TodoEntity) {
         viewModelScope.launch {
             todoRepository.update(todo.copy(isCompleted = !todo.isCompleted))
+        }
+    }
+
+    fun onToggleTag(tagId: Int) {
+        val todo = _uiState.value.selectedTodo ?: return
+        val newTagIds = if (todo.tagIds.contains(tagId)) {
+            todo.tagIds - tagId
+        } else {
+            todo.tagIds + tagId
+        }
+        viewModelScope.launch {
+            todoRepository.update(todo.copy(tagIds = newTagIds))
+        }
+    }
+
+    fun onCreateTag(name: String, description: String) {
+        viewModelScope.launch {
+            val userId = sessionManager.loggedInUserId
+            if (userId != -1) {
+                tagRepository.createTag(name, description, userId)
+            }
         }
     }
 

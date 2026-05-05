@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todo.model.local.entity.TodoEntity
 import com.example.todo.model.repository.TodoRepository
+import com.example.todo.model.repository.TagRepository
 import com.example.todo.model.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -20,6 +22,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TodoListViewModel @Inject constructor(
     private val repository: TodoRepository,
+    private val tagRepository: TagRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -32,10 +35,17 @@ class TodoListViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             sessionManager.userId.flatMapLatest { userId ->
-                if (userId != -1) repository.getTodos(userId) else flowOf(emptyList())
-            }.collect { todos ->
-                _uiState.value = TodoListUiState.Success(todos)
-            }
+                if (userId != -1) {
+                    combine(
+                        repository.getTodos(userId),
+                        tagRepository.getTags(userId)
+                    ) { todos, tags ->
+                        TodoListUiState.Success(todos, tags)
+                    }
+                } else {
+                    flowOf(TodoListUiState.Loading)
+                }
+            }.collect { _uiState.value = it }
         }
     }
 
