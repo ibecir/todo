@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onStart
+import retrofit2.HttpException
+import java.io.IOException
 import javax.inject.Inject
 
 class TagRepository @Inject constructor(
@@ -22,7 +24,9 @@ class TagRepository @Inject constructor(
                 try {
                     val allTags = tagsApi.getTags()
                     emit(allTags.filter { it.userId == userId })
-                } catch (e: Exception) {
+                } catch (e: IOException) {
+                    emit(emptyList())
+                } catch (e: HttpException) {
                     emit(emptyList())
                 }
             }
@@ -33,7 +37,9 @@ class TagRepository @Inject constructor(
             val tag = tagsApi.createTag(CreateTagRequest(name, description, userId))
             refreshTrigger.tryEmit(Unit)
             tag
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            null
+        } catch (e: HttpException) {
             null
         }
     }
@@ -42,7 +48,9 @@ class TagRepository @Inject constructor(
         try {
             tagsApi.deleteTag(tagId)
             refreshTrigger.tryEmit(Unit)
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            // ignore for now
+        } catch (e: HttpException) {
             // ignore for now
         }
     }

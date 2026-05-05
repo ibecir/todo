@@ -1,21 +1,22 @@
 package com.example.todo.model.local
 
 import androidx.room.TypeConverter
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.json.Json
 
 class Converters {
-    private val gson = Gson()
 
     @TypeConverter
     fun fromIntList(value: List<Int>?): String {
-        return gson.toJson(value ?: emptyList<Int>())
+        return Json.encodeToString(value ?: emptyList())
     }
 
     @TypeConverter
     fun toIntList(value: String?): List<Int> {
         if (value.isNullOrEmpty()) return emptyList()
-        val listType = object : TypeToken<List<Int>>() {}.type
-        return gson.fromJson(value, listType) ?: emptyList()
+        return try {
+            Json.decodeFromString<List<Int>>(value)
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 }

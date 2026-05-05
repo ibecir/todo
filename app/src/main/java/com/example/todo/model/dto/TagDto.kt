@@ -1,16 +1,19 @@
 package com.example.todo.model.dto
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class TagDto(
     val id: Int,
     val name: String,
     val description: String,
-    @SerializedName("user_id") val userId: Int
+    @SerialName("user_id") val userId: Int
 )
 
+@Serializable
 data class CreateTagRequest(
     val name: String,
     val description: String,
-    @SerializedName("user_id") val userId: Int
+    @SerialName("user_id") val userId: Int
 )
