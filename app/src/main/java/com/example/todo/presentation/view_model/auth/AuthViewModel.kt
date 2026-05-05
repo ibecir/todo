@@ -6,8 +6,11 @@ import com.example.todo.model.repository.UserRepository
 import com.example.todo.model.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,11 +24,12 @@ class AuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    private val _isLoggedIn = MutableStateFlow(sessionManager.isLoggedIn)
-    val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
+    val isLoggedIn: StateFlow<Boolean> = sessionManager.userId
+        .map { it != -1 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), sessionManager.isLoggedIn)
 
-    private val _loggedInUsername = MutableStateFlow(sessionManager.loggedInUsername)
-    val loggedInUsername: StateFlow<String?> = _loggedInUsername.asStateFlow()
+    val loggedInUsername: StateFlow<String?> = sessionManager.username
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), sessionManager.loggedInUsername)
 
     fun onToggleMode() {
         _uiState.update { it.copy(isLoginMode = !it.isLoginMode, errorMessage = null) }
@@ -35,34 +39,20 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val result = userRepository.login(username, password)
-            result.fold(
-                onSuccess = {
-                    _isLoggedIn.value = true
-                    _loggedInUsername.value = username
-                },
-                onFailure = { e -> _uiState.update { it.copy(errorMessage = e.message) } }
-            )
+            result.onFailure { e -> _uiState.update { it.copy(errorMessage = e.message) } }
             _uiState.update { it.copy(isLoading = false) }
         }
     }
 
     fun onLogout() {
         sessionManager.clearSession()
-        _isLoggedIn.value = false
-        _loggedInUsername.value = null
     }
 
     fun onRegister(username: String, password: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val result = userRepository.register(username, password)
-            result.fold(
-                onSuccess = {
-                    _isLoggedIn.value = true
-                    _loggedInUsername.value = username
-                },
-                onFailure = { e -> _uiState.update { it.copy(errorMessage = e.message) } }
-            )
+            result.onFailure { e -> _uiState.update { it.copy(errorMessage = e.message) } }
             _uiState.update { it.copy(isLoading = false) }
         }
     }

@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
@@ -32,9 +33,11 @@ class TodosViewModel @Inject constructor(
     private val _selectedTodoId = MutableStateFlow<Int?>(null)
 
     init {
-        Log.d("TodosViewModel", "Init called with loggedInUserId: ${sessionManager.loggedInUserId}")
+        Log.d("TodosViewModel", "Init called")
         viewModelScope.launch {
-            todoRepository.getTodos(sessionManager.loggedInUserId).collect { todos ->
+            sessionManager.userId.flatMapLatest { userId ->
+                if (userId != -1) todoRepository.getTodos(userId) else flowOf(emptyList())
+            }.collect { todos ->
                 Log.d("TodosViewModel", "Collected todos: ${todos.size}")
                 _uiState.update { it.copy(
                     todos = todos,
@@ -43,14 +46,24 @@ class TodosViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            _selectedTodoId.flatMapLatest { id ->
-                if (id != null) itemRepository.getItemsForTodo(id) else flowOf(emptyList())
-            }.collect { items ->
-                _uiState.update { it.copy(selectedTodoItems = items) }
-            }
+            combine(
+                _selectedTodoId,
+                sessionManager.userId
+            ) { todoId, userId ->
+                if (todoId != null && userId != -1) {
+                    itemRepository.getItemsForTodo(todoId, userId)
+                } else {
+                    flowOf(emptyList())
+                }
+            }.flatMapLatest { it }
+                .collect { items ->
+                    _uiState.update { it.copy(selectedTodoItems = items) }
+                }
         }
         viewModelScope.launch {
-            itemRepository.getAllItems(sessionManager.loggedInUserId).collect { items ->
+            sessionManager.userId.flatMapLatest { userId ->
+                if (userId != -1) itemRepository.getAllItems(userId) else flowOf(emptyList())
+            }.collect { items ->
                 _uiState.update { it.copy(allItems = items) }
             }
         }

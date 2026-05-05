@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,7 +31,9 @@ class TodoListViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.getTodos(sessionManager.loggedInUserId).collect { todos ->
+            sessionManager.userId.flatMapLatest { userId ->
+                if (userId != -1) repository.getTodos(userId) else flowOf(emptyList())
+            }.collect { todos ->
                 _uiState.value = TodoListUiState.Success(todos)
             }
         }

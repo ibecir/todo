@@ -9,6 +9,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,9 +27,11 @@ class ItemsViewModel @Inject constructor(
     val uiState: StateFlow<ItemsUiState> = _uiState.asStateFlow()
 
     init {
-        Log.d("ItemsViewModel", "Init called with loggedInUserId: ${sessionManager.loggedInUserId}")
+        Log.d("ItemsViewModel", "Init called")
         viewModelScope.launch {
-            itemRepository.getAllItems(sessionManager.loggedInUserId).collect { items ->
+            sessionManager.userId.flatMapLatest { userId ->
+                if (userId != -1) itemRepository.getAllItems(userId) else flowOf(emptyList())
+            }.collect { items ->
                 Log.d("ItemsViewModel", "Collected items: ${items.size}")
                 _uiState.update { it.copy(items = items) }
             }

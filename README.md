@@ -27,7 +27,7 @@ Database (Room)
 Three tables with a many-to-many relationship between `todos` and `items`:
 
 ```
-todos                    todo_item_cross_ref              items
+todos                    todo_items              items
 ─────────────────        ────────────────────────         ────────────────────────
 id          INT (PK)     todoId  INT  (FK → todos)        id           INT (PK)
 title       TEXT         itemId  INT  (FK → items)        name         TEXT
@@ -121,7 +121,7 @@ fun getTodoStats(): Flow<TodoStatsDto>
 @Query("""
     SELECT
         COUNT(*)                                                    AS totalCount,
-        (SELECT COUNT(DISTINCT itemId) FROM todo_item_cross_ref)   AS assignedCount
+        (SELECT COUNT(DISTINCT itemId) FROM todo_items)   AS assignedCount
     FROM items
 """)
 fun getItemStats(): Flow<ItemStatsDto>
@@ -266,7 +266,7 @@ The DTOs arrive independently. If only the item table changes, only `itemStats` 
 3.  TodosViewModel.onToggleItem(item) — checks if item is currently assigned
 4.  viewModelScope.launch { itemRepository.addItemToTodo(todoId, item.id) }
          OR  itemRepository.removeItemFromTodo(todoId, item.id)
-5.  Room executes INSERT/DELETE on todo_item_cross_ref (IO thread)
+5.  Room executes INSERT/DELETE on todo_items (IO thread)
 6.  Room detects the change, re-runs getItemsForTodo(todoId) query
 7.  New List<ItemEntity> emitted on the Flow
 8.  flatMapLatest collector receives the list (back on Main)
@@ -380,7 +380,7 @@ com.example.todo/
 │   │   ├── entity/
 │   │   │   ├── TodoEntity.kt                     @Entity — todos table
 │   │   │   ├── ItemEntity.kt                     @Entity — items table
-│   │   │   ├── TodoItemCrossRef.kt               @Entity — junction table (many-to-many)
+│   │   │   ├── TodoItems.kt               @Entity — junction table (many-to-many)
 │   │   │   └── TodoWithItems.kt                  @Relation POJO (unused in UI, available for queries)
 │   │   ├── dao/
 │   │   │   ├── TodoDao.kt                        CRUD + getTodoStats() aggregate

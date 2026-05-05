@@ -7,12 +7,12 @@ import com.example.todo.model.local.dao.TodoDao
 import com.example.todo.model.local.dao.UserDao
 import com.example.todo.model.local.entity.ItemEntity
 import com.example.todo.model.local.entity.TodoEntity
-import com.example.todo.model.local.entity.TodoItemCrossRef
+import com.example.todo.model.local.entity.TodoItems
 import com.example.todo.model.local.entity.UserEntity
 
 @Database(
-    entities = [TodoEntity::class, ItemEntity::class, TodoItemCrossRef::class, UserEntity::class],
-    version = 4,
+    entities = [TodoEntity::class, ItemEntity::class, TodoItems::class, UserEntity::class],
+    version = 7,
     exportSchema = false
 )
 abstract class TodoDatabase : RoomDatabase() {

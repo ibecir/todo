@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,11 +38,17 @@ class TodoDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(
-                todoRepository.getTodoById(todoId, sessionManager.loggedInUserId),
-                itemRepository.getItemsForTodo(todoId)
-            ) { todo, items ->
-                todo?.let { TodoDetailUiState.Success(it, items) } ?: TodoDetailUiState.Loading
+            sessionManager.userId.flatMapLatest { userId ->
+                if (userId != -1) {
+                    combine(
+                        todoRepository.getTodoById(todoId, userId),
+                        itemRepository.getItemsForTodo(todoId, userId)
+                    ) { todo, items ->
+                        todo?.let { TodoDetailUiState.Success(it, items) } ?: TodoDetailUiState.Loading
+                    }
+                } else {
+                    flowOf(TodoDetailUiState.Loading)
+                }
             }.collect { _uiState.value = it }
         }
     }
