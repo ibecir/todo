@@ -3,6 +3,7 @@ package com.example.todo.presentation.ui
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Star
@@ -23,9 +24,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.todo.presentation.ui.screens.ItemsScreen
+import com.example.todo.presentation.ui.screens.MarsPhotosScreen
 import com.example.todo.presentation.ui.screens.StatsScreen
 import com.example.todo.presentation.ui.screens.TodosScreen
 import com.example.todo.presentation.view_model.items.ItemsViewModel
+import com.example.todo.presentation.view_model.mars.MarsViewModel
 import com.example.todo.presentation.view_model.stats.StatsViewModel
 import com.example.todo.presentation.view_model.todos.TodosViewModel
 
@@ -35,6 +38,7 @@ fun MainScreen(username: String?, onLogout: () -> Unit) {
     val todosViewModel: TodosViewModel = hiltViewModel()
     val itemsViewModel: ItemsViewModel = hiltViewModel()
     val statsViewModel: StatsViewModel = hiltViewModel()
+    val marsViewModel: MarsViewModel = hiltViewModel()
 
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -46,7 +50,8 @@ fun MainScreen(username: String?, onLogout: () -> Unit) {
                         when (selectedTab) {
                             0 -> "My Todos"
                             1 -> "Items"
-                            else -> "Stats"
+                            2 -> "Stats"
+                            else -> "Mars Photos"
                         }
                     )
                 },
@@ -84,6 +89,12 @@ fun MainScreen(username: String?, onLogout: () -> Unit) {
                     icon = { Icon(Icons.Default.Info, contentDescription = null) },
                     label = { Text("Stats") }
                 )
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    icon = { Icon(Icons.Default.Face, contentDescription = null) }, // Using Face for Mars
+                    label = { Text("Mars") }
+                )
             }
         }
     ) { padding ->
@@ -91,6 +102,7 @@ fun MainScreen(username: String?, onLogout: () -> Unit) {
             0 -> TodosScreen(viewModel = todosViewModel, modifier = Modifier.padding(padding))
             1 -> ItemsScreen(viewModel = itemsViewModel, modifier = Modifier.padding(padding))
             2 -> StatsScreen(viewModel = statsViewModel, modifier = Modifier.padding(padding))
+            3 -> MarsPhotosScreen(viewModel = marsViewModel, modifier = Modifier.padding(padding))
         }
     }
 }

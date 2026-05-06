@@ -11,4 +11,5 @@ sealed class Screen(val route: String) {
             if (itemId != null) "item_form/$todoId?itemId=$itemId"
             else "item_form/$todoId"
     }
+    data object MarsPhotos : Screen("mars_photos")
 }

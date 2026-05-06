@@ -48,7 +48,8 @@ import com.example.todo.presentation.view_model.list.TodoListViewModel
 fun TodoListScreen(
     viewModel: TodoListViewModel = hiltViewModel(),
     onNavigateToAdd: () -> Unit,
-    onNavigateToDetail: (Int) -> Unit
+    onNavigateToDetail: (Int) -> Unit,
+    onNavigateToMars: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -74,7 +75,8 @@ fun TodoListScreen(
             onAddClick = viewModel::onAddClick,
             onTodoClick = viewModel::onTodoClick,
             onToggleComplete = viewModel::onToggleComplete,
-            onDelete = viewModel::onDelete
+            onDelete = viewModel::onDelete,
+            onMarsClick = onNavigateToMars
         )
     }
 }
@@ -87,11 +89,22 @@ private fun TodoListContent(
     onAddClick: () -> Unit,
     onTodoClick: (TodoEntity) -> Unit,
     onToggleComplete: (TodoEntity) -> Unit,
-    onDelete: (TodoEntity) -> Unit
+    onDelete: (TodoEntity) -> Unit,
+    onMarsClick: () -> Unit
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("My Todos") })
+            TopAppBar(
+                title = { Text("My Todos") },
+                actions = {
+                    IconButton(onClick = onMarsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Add, // Using Add as a placeholder or search for a better icon
+                            contentDescription = "Mars Photos"
+                        )
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {

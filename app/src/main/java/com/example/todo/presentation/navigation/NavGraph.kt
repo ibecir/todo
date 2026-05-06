@@ -1,6 +1,7 @@
 package com.example.todo.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -8,8 +9,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.todo.presentation.ui.screens.AddTodoScreen
 import com.example.todo.presentation.ui.screens.ItemFormScreen
+import com.example.todo.presentation.ui.screens.MarsPhotosScreen
 import com.example.todo.presentation.ui.screens.TodoDetailScreen
 import com.example.todo.presentation.ui.screens.TodoListScreen
+import com.example.todo.presentation.view_model.mars.MarsViewModel
 
 @Composable
 fun NavGraph(navController: NavHostController) {
@@ -22,7 +25,8 @@ fun NavGraph(navController: NavHostController) {
                 onNavigateToAdd = { navController.navigate(Screen.AddTodo.route) },
                 onNavigateToDetail = { todoId ->
                     navController.navigate(Screen.TodoDetail.createRoute(todoId))
-                }
+                },
+                onNavigateToMars = { navController.navigate(Screen.MarsPhotos.route) }
             )
         }
 
@@ -54,6 +58,11 @@ fun NavGraph(navController: NavHostController) {
             ItemFormScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+
+        composable(Screen.MarsPhotos.route) {
+            val viewModel: MarsViewModel = hiltViewModel()
+            MarsPhotosScreen(viewModel = viewModel)
         }
     }
 }

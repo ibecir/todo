@@ -69,10 +69,14 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
-    // Retrofit & Gson
+    // Retrofit & Serialization
     implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
+
+    // Coil
+    implementation(libs.coil.compose)
 
     // Kotlin Serialization
     implementation(libs.kotlinx.serialization.json)
