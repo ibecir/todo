@@ -1,7 +1,7 @@
 package com.example.todo.di
 
-import com.example.todo.data.remote.MarsApiService
-import com.example.todo.data.remote.TagsApi
+import com.example.todo.data.remote.services.MarsApiService
+import com.example.todo.data.remote.services.TagsApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

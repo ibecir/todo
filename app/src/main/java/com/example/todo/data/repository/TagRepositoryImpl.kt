@@ -1,7 +1,7 @@
 package com.example.todo.data.repository
 
 import com.example.todo.data.mapper.toDomain
-import com.example.todo.data.remote.TagsApi
+import com.example.todo.data.remote.services.TagsApi
 import com.example.todo.data.remote.dto.CreateTagRequest
 import com.example.todo.domain.model.Tag
 import com.example.todo.domain.repository.TagRepository

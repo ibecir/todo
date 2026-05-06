@@ -1,4 +1,4 @@
-package com.example.todo.data.remote
+package com.example.todo.data.remote.services
 
 import com.example.todo.data.remote.dto.CreateTagRequest
 import com.example.todo.data.remote.dto.TagDto

@@ -1,7 +1,7 @@
 package com.example.todo.data.repository
 
 import com.example.todo.data.mapper.toDomain
-import com.example.todo.data.remote.MarsApiService
+import com.example.todo.data.remote.services.MarsApiService
 import com.example.todo.domain.model.MarsPhoto
 import com.example.todo.domain.repository.MarsRepository
 import javax.inject.Inject

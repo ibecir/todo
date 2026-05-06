@@ -1,4 +1,4 @@
-package com.example.todo.data.remote
+package com.example.todo.data.remote.services
 
 import com.example.todo.data.remote.dto.MarsPhotoDto
 import retrofit2.http.GET
