@@ -2,10 +2,10 @@ package com.example.todo.di
 
 import android.content.Context
 import androidx.room.Room
-import com.example.todo.model.local.TodoDatabase
-import com.example.todo.model.local.dao.ItemDao
-import com.example.todo.model.local.dao.TodoDao
-import com.example.todo.model.local.dao.UserDao
+import com.example.todo.data.local.TodoDatabase
+import com.example.todo.data.local.dao.ItemDao
+import com.example.todo.data.local.dao.TodoDao
+import com.example.todo.data.local.dao.UserDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
