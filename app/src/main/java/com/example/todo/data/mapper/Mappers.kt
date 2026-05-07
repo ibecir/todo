@@ -3,10 +3,7 @@ package com.example.todo.data.mapper
 import com.example.todo.data.local.entity.ItemEntity
 import com.example.todo.data.local.entity.TodoEntity
 import com.example.todo.data.local.entity.UserEntity
-import com.example.todo.data.remote.dto.ItemStatsDto
-import com.example.todo.data.remote.dto.MarsPhotoDto
-import com.example.todo.data.remote.dto.TagDto
-import com.example.todo.data.remote.dto.TodoStatsDto
+import com.example.todo.data.remote.dto.*
 import com.example.todo.domain.model.Item
 import com.example.todo.domain.model.ItemStats
 import com.example.todo.domain.model.Tag
@@ -77,3 +74,57 @@ fun MarsPhotoDto.toDomain(): MarsPhoto =
         id = id,
         imgSrc = imgSrc
     )
+
+// Firebase Mappers
+fun FirebaseTodoDto.toDomain(): Todo = Todo(
+    id = id,
+    userId = userId,
+    title = title,
+    isCompleted = isCompleted,
+    tagIds = tagIds
+)
+
+fun Todo.toFirebaseDto(): FirebaseTodoDto = FirebaseTodoDto(
+    id = id,
+    userId = userId,
+    title = title,
+    isCompleted = isCompleted,
+    tagIds = tagIds
+)
+
+fun FirebaseItemDto.toDomain(): Item = Item(
+    id = id,
+    userId = userId,
+    name = name,
+    description = description,
+    createdAt = createdAt,
+    updatedAt = updatedAt
+)
+
+fun Item.toFirebaseDto(): FirebaseItemDto = FirebaseItemDto(
+    id = id,
+    userId = userId,
+    name = name,
+    description = description,
+    createdAt = createdAt,
+    updatedAt = updatedAt
+)
+
+fun FirebaseUserDto.toDomain(): User = User(
+    id = id,
+    username = username
+)
+
+fun FirebaseTagDto.toDomain(): Tag = Tag(
+    id = id,
+    name = name,
+    description = description,
+    userId = userId
+)
+
+fun Tag.toFirebaseDto(): FirebaseTagDto = FirebaseTagDto(
+    id = id,
+    name = name,
+    description = description,
+    userId = userId
+)

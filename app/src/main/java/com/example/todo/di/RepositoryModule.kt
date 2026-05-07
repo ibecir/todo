@@ -1,52 +1,57 @@
 package com.example.todo.di
 
-import com.example.todo.data.repository.ItemRepositoryImpl
-import com.example.todo.data.repository.MarsRepositoryImpl
-import com.example.todo.data.repository.TagRepositoryImpl
-import com.example.todo.data.repository.TodoRepositoryImpl
-import com.example.todo.data.repository.UserRepositoryImpl
-import com.example.todo.domain.repository.ItemRepository
-import com.example.todo.domain.repository.MarsRepository
-import com.example.todo.domain.repository.TagRepository
-import com.example.todo.domain.repository.TodoRepository
-import com.example.todo.domain.repository.UserRepository
-import dagger.Binds
+import ba.edu.ibu.BuildConfig
+import com.example.todo.data.repository.*
+import com.example.todo.domain.repository.*
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class RepositoryModule {
+object RepositoryModule {
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindTodoRepository(
-        todoRepositoryImpl: TodoRepositoryImpl
-    ): TodoRepository
+    fun provideTodoRepository(
+        roomImpl: TodoRepositoryImpl,
+        firebaseImpl: FirebaseTodoRepositoryImpl
+    ): TodoRepository {
+        return if (BuildConfig.USE_FIREBASE) firebaseImpl else roomImpl
+    }
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindItemRepository(
-        itemRepositoryImpl: ItemRepositoryImpl
-    ): ItemRepository
+    fun provideItemRepository(
+        roomImpl: ItemRepositoryImpl,
+        firebaseImpl: FirebaseItemRepositoryImpl
+    ): ItemRepository {
+        return if (BuildConfig.USE_FIREBASE) firebaseImpl else roomImpl
+    }
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindUserRepository(
-        userRepositoryImpl: UserRepositoryImpl
-    ): UserRepository
+    fun provideUserRepository(
+        roomImpl: UserRepositoryImpl,
+        firebaseImpl: FirebaseUserRepositoryImpl
+    ): UserRepository {
+        return if (BuildConfig.USE_FIREBASE) firebaseImpl else roomImpl
+    }
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindTagRepository(
-        tagRepositoryImpl: TagRepositoryImpl
-    ): TagRepository
+    fun provideTagRepository(
+        roomImpl: TagRepositoryImpl,
+        firebaseImpl: FirebaseTagRepositoryImpl
+    ): TagRepository {
+        return if (BuildConfig.USE_FIREBASE) firebaseImpl else roomImpl
+    }
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindMarsRepository(
+    fun provideMarsRepository(
         marsRepositoryImpl: MarsRepositoryImpl
-    ): MarsRepository
+    ): MarsRepository = marsRepositoryImpl
 }

@@ -2,89 +2,91 @@
 
 This document describes the directory layout and architectural patterns used in the Todo application. The project follows **Clean Architecture** principles organized by **Features**.
 
-## 1. High-Level Architecture
+## 1. High-Level Architecture: The "Why"
 
-The application is divided into three primary layers to ensure a strict separation of concerns:
+While it might seem like there are "extra steps," this architecture is designed for **flexibility, testability, and long-term maintenance.** 
 
--   **Data Layer (`data/`):** Implementation details for data persistence (Room) and remote communication (Retrofit).
--   **Domain Layer (`domain/`):** Pure business logic. Contains the "Source of Truth" models and Repository interfaces.
--   **Presentation Layer (`ui/`):** The UI layer using Jetpack Compose and ViewModels.
+By separating the app into distinct layers, we ensure that the "Business Logic" (how your app works) is independent of "Infrastructure" (the database, the internet, or the UI framework).
 
 ---
 
-## 2. Directory Layout
+## 2. The Three Layers
+
+### 🏛️ Domain Layer (`domain/`)
+**The "Brain" of the App.**
+- **Domain Models:** Pure Kotlin classes (e.g., `Todo`, `Item`). These are the **"Universal Translators."** They have no knowledge of Room, Retrofit, or Android.
+- **Repository Interfaces:** The "Contracts." They define *what* the app can do (e.g., `fun getAllItems()`) without specifying *how* (e.g., SQL vs JSON).
+- **Benefit:** If you want to change how data is stored, you never have to touch this layer.
+
+### 🔌 Data Layer (`data/`)
+**The "Worker" of the App.**
+- **Entities & DTOs:** Models specific to the database (`ItemEntity`) or API (`ItemDto`).
+- **Repositories Implementation:** These classes "plug into" the Domain interfaces. They are responsible for fetching data and **mapping** it into Domain Models.
+- **Mappers:** The bridge that converts `Entity` ↔ `Domain Model`.
+- **Benefit:** All the "messy" details of SQL queries or Network errors are hidden here.
+
+### 📱 Presentation Layer (`ui/`)
+**The "Face" of the App.**
+- **ViewModels:** They ask for a Repository **interface**. They don't care if the data comes from a local file or a server in space.
+- **Compose UI:** Renders the `UiState`. It only ever sees **Domain Models**.
+- **Benefit:** The UI stays clean and focused only on showing data, not managing it.
+
+---
+
+## 3. The "Universal Translator" (Domain Models)
+
+Imagine your app as a global hub:
+1.  **The Database** speaks "Table Rows" (`ItemEntity`).
+2.  **The Internet** speaks "JSON" (`ItemDto`).
+3.  **The UI** speaks "Clean Kotlin" (`Item`).
+
+The **Repository** acts as the translator. Because the `ViewModel` and `UI` only ever see the "Clean Kotlin" version, they are protected from changes in the underlying data sources.
+
+---
+
+## 4. Dependency Injection: The "Switchboard"
+
+We use **Hilt** to manage how these layers connect. The file `di/RepositoryModule.kt` acts as the master switchboard.
+
+### The "Swapping Database" Scenario
+If we need to move from **Local Room** storage to a **Remote Cloud API**:
+1.  **Old Way (Hard):** You'd have to rewrite every ViewModel and UI screen.
+2.  **Clean Way (Easy):** 
+    - Create a new implementation of the Repository interface (e.g., `ItemRepositoryRemoteImpl`).
+    - Change **one line** in `RepositoryModule.kt` to point to the new class.
+    - **Result:** The ViewModels and UI continue to work perfectly without knowing anything changed.
+
+---
+
+## 5. Directory Layout
 
 ```text
 com.example.todo/
-├── data/                    # DATA LAYER
+├── data/                    # DATA LAYER (Implementation)
 │   ├── local/               # Room database, DAOs, and Entities
 │   ├── remote/              # Retrofit API interfaces and DTOs
-│   ├── repository/          # Implementation of domain repository interfaces
+│   ├── repository/          # The "Workers" that implement the Domain contracts
 │   ├── mapper/              # Mappers (Conversion between Entity/DTO and Domain)
 │   └── session/             # Local session management (SharedPreferences)
 │
-├── domain/                  # DOMAIN LAYER
-│   ├── model/               # Pure Kotlin POJOs (The "Domain Models")
-│   └── repository/          # Repository interfaces (The "Contracts")
+├── domain/                  # DOMAIN LAYER (Business Logic)
+│   ├── model/               # The "Universal Translator" models
+│   └── repository/          # The "Contracts" (Interfaces)
 │
-├── ui/                      # PRESENTATION LAYER
-│   ├── features/            # Feature-based organization
-│   │   ├── auth/            # Authentication (Login/Register)
-│   │   ├── todos/           # Main Todo list management
-│   │   ├── todo_detail/     # Detailed view of a single Todo
-│   │   ├── items/           # Global Item management
-│   │   ├── stats/           # User statistics
-│   │   └── mars/            # External API integration (Mars Photos)
+├── ui/                      # PRESENTATION LAYER (UI)
+│   ├── features/            # Feature-based organization (auth, todos, items, etc.)
 │   ├── navigation/          # Compose Navigation (NavGraph, Screen routes)
-│   ├── common/              # Shared UI components (Stateless)
-│   └── theme/               # Design system (Color, Shape, Typography)
+│   ├── common/              # Shared UI components
+│   └── theme/               # Design system (Color, Typography)
 │
-├── di/                      # Dependency Injection (Hilt Modules)
-└── MainActivity.kt          # Entry point and Root UI decision logic
+├── di/                      # THE SWITCHBOARD (Hilt Modules)
+└── MainActivity.kt          # Entry point
 ```
 
 ---
 
-## 3. Data Flow & Model Naming
+## 6. Key Conventions
 
-To prevent technical details from leaking into the UI, we use distinct models for different purposes:
-
-### Local Persistence (`data/local/entity/`)
--   **Suffix:** `Entity` (e.g., `TodoEntity`).
--   **Role:** Annotated with Room attributes. Used strictly for database rows.
-
-### Remote Communication (`data/remote/dto/`)
--   **Suffix:** `Dto` (e.g., `TagDto`, `MarsPhotoDto`).
--   **Role:** Annotated with `@Serializable`. Used strictly for JSON serialization/deserialization.
-
-### Pure Business Logic (`domain/model/`)
--   **Suffix:** None (e.g., `Todo`, `Tag`, `MarsPhoto`).
--   **Role:** Pure Kotlin data classes. This is the **only** model type that should reach the ViewModels and UI.
-
----
-
-## 4. Layer Responsibilities
-
-### Data Layer
--   Performs CRUD operations on the database.
--   Handles network exceptions and HTTP status codes.
--   Uses **Mappers** to convert technical models (`Entity`/`Dto`) into `Domain` models before returning them to the higher layers.
-
-### Domain Layer
--   Defines the business models that the UI depends on.
--   Defines repository interfaces that specify *what* data is needed without caring *where* it comes from.
--   Contains Use Cases (optional, added as complexity grows).
-
-### Presentation Layer
--   **ViewModels:** Observe reactive streams from Repositories and maintain a single `UiState`.
--   **Screens:** Stateless Compose functions that render the `UiState`.
--   **Navigation:** Uses `NavGraph` to coordinate transitions between features.
-
----
-
-## 5. Key Conventions
-
-1.  **Reactive State:** All data access should ideally return a `Flow<T>`.
-2.  **Unidirectional Data Flow:** UI triggers events → ViewModel updates state → UI renders state.
-3.  **Hilt for DI:** All dependencies are provided via Hilt. Use `@Binds` in `RepositoryModule` to link interfaces to implementations.
-4.  **No Leaky Abstractions:** Never use a `TodoEntity` or `TagDto` inside a Composable or a ViewModel. Always map to a `domain/model` first.
+1.  **No Leaky Abstractions:** Never use an `Entity` or `Dto` in a ViewModel or Screen. Always map to `Domain`.
+2.  **UDF (Unidirectional Data Flow):** Events go UP to the ViewModel; State flows DOWN to the UI.
+3.  **Reactive Architecture:** Use `Flow` to ensure the UI updates automatically when data changes in the database.
