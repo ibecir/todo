@@ -75,54 +75,8 @@ fun MarsPhotoDto.toDomain(): MarsPhoto =
         imgSrc = imgSrc
     )
 
-// Firebase Mappers
-fun FirebaseTodoDto.toDomain(): Todo = Todo(
-    id = id,
-    userId = userId,
-    title = title,
-    isCompleted = isCompleted,
-    tagIds = tagIds
-)
-
-fun Todo.toFirebaseDto(): FirebaseTodoDto = FirebaseTodoDto(
-    id = id,
-    userId = userId,
-    title = title,
-    isCompleted = isCompleted,
-    tagIds = tagIds
-)
-
-fun FirebaseItemDto.toDomain(): Item = Item(
-    id = id,
-    userId = userId,
-    name = name,
-    description = description,
-    createdAt = createdAt,
-    updatedAt = updatedAt
-)
-
-fun Item.toFirebaseDto(): FirebaseItemDto = FirebaseItemDto(
-    id = id,
-    userId = userId,
-    name = name,
-    description = description,
-    createdAt = createdAt,
-    updatedAt = updatedAt
-)
-
-fun FirebaseUserDto.toDomain(): User = User(
-    id = id,
-    username = username
-)
-
-fun FirebaseTagDto.toDomain(): Tag = Tag(
-    id = id,
-    name = name,
-    description = description,
-    userId = userId
-)
-
-fun Tag.toFirebaseDto(): FirebaseTagDto = FirebaseTagDto(
+// Firebase & Shared Mappers
+fun Tag.toDto(): TagDto = TagDto(
     id = id,
     name = name,
     description = description,

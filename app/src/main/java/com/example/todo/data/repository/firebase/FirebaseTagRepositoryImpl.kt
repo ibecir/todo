@@ -1,8 +1,8 @@
-package com.example.todo.data.repository
+package com.example.todo.data.repository.firebase
 
 import com.example.todo.data.mapper.toDomain
-import com.example.todo.data.mapper.toFirebaseDto
-import com.example.todo.data.remote.dto.FirebaseTagDto
+import com.example.todo.data.mapper.toDto
+import com.example.todo.data.remote.dto.TagDto
 import com.example.todo.domain.model.Tag
 import com.example.todo.domain.repository.TagRepository
 import com.google.firebase.firestore.FirebaseFirestore
@@ -23,14 +23,14 @@ class FirebaseTagRepositoryImpl @Inject constructor(
             .whereEqualTo("userId", userId)
             .snapshots()
             .map { snapshot ->
-                snapshot.documents.mapNotNull { it.toObject(FirebaseTagDto::class.java)?.toDomain() }
+                snapshot.documents.mapNotNull { it.toObject(TagDto::class.java)?.toDomain() }
             }
     }
 
     override suspend fun createTag(name: String, description: String, userId: Int): Tag? {
         val tagId = System.currentTimeMillis().toInt()
         val tag = Tag(id = tagId, name = name, description = description, userId = userId)
-        tagCollection.add(tag.toFirebaseDto()).await()
+        tagCollection.add(tag.toDto()).await()
         return tag
     }
 

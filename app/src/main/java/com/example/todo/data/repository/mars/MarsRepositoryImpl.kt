@@ -1,4 +1,4 @@
-package com.example.todo.data.repository
+package com.example.todo.data.repository.mars
 
 import com.example.todo.data.mapper.toDomain
 import com.example.todo.data.remote.services.MarsApiService

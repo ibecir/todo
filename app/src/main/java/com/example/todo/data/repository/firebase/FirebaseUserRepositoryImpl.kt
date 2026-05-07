@@ -1,6 +1,6 @@
-package com.example.todo.data.repository
+package com.example.todo.data.repository.firebase
 
-import com.example.todo.data.remote.dto.FirebaseUserDto
+import com.example.todo.data.local.entity.UserEntity
 import com.example.todo.data.session.SessionManager
 import com.example.todo.domain.repository.UserRepository
 import com.google.firebase.firestore.FirebaseFirestore
@@ -24,14 +24,16 @@ class FirebaseUserRepositoryImpl @Inject constructor(
             return Result.failure(IllegalArgumentException("Username already taken"))
         }
 
-        val userId = System.currentTimeMillis().toInt()
-        val userDto = FirebaseUserDto(
+        val userId = (System.currentTimeMillis() % Int.MAX_VALUE).toInt().let { 
+            if (it == -1) 0 else it 
+        }
+        val userEntity = UserEntity(
             id = userId,
             username = username,
             password = password
         )
 
-        usersCollection.add(userDto).await()
+        usersCollection.add(userEntity).await()
         sessionManager.saveSession(userId, username)
         return Result.success(Unit)
     }
@@ -46,14 +48,14 @@ class FirebaseUserRepositoryImpl @Inject constructor(
             return Result.failure(IllegalArgumentException("User not found"))
         }
 
-        val userDto = snapshot.documents.first().toObject(FirebaseUserDto::class.java)
+        val userEntity = snapshot.documents.first().toObject(UserEntity::class.java)
             ?: return Result.failure(IllegalStateException("Error parsing user data"))
 
-        if (userDto.password != password) {
+        if (userEntity.password != password) {
             return Result.failure(IllegalArgumentException("Incorrect password"))
         }
 
-        sessionManager.saveSession(userDto.id, username)
+        sessionManager.saveSession(userEntity.id, username)
         return Result.success(Unit)
     }
 }

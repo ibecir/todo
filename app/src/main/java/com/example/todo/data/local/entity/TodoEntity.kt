@@ -17,8 +17,8 @@ import androidx.room.PrimaryKey
 )
 data class TodoEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val userId: Int,
-    val title: String,
+    val userId: Int = 0,
+    val title: String = "",
     val isCompleted: Boolean = false,
     val tagIds: List<Int> = emptyList()
 )

@@ -1,8 +1,8 @@
-package com.example.todo.data.repository
+package com.example.todo.data.repository.firebase
 
+import com.example.todo.data.local.entity.TodoEntity
 import com.example.todo.data.mapper.toDomain
-import com.example.todo.data.mapper.toFirebaseDto
-import com.example.todo.data.remote.dto.FirebaseTodoDto
+import com.example.todo.data.mapper.toEntity
 import com.example.todo.domain.model.Todo
 import com.example.todo.domain.model.TodoStats
 import com.example.todo.domain.repository.TodoRepository
@@ -24,7 +24,7 @@ class FirebaseTodoRepositoryImpl @Inject constructor(
             .whereEqualTo("userId", userId)
             .snapshots()
             .map { snapshot ->
-                snapshot.documents.mapNotNull { it.toObject(FirebaseTodoDto::class.java)?.toDomain() }
+                snapshot.documents.mapNotNull { it.toObject(TodoEntity::class.java)?.toDomain() }
             }
     }
 
@@ -45,13 +45,13 @@ class FirebaseTodoRepositoryImpl @Inject constructor(
             .whereEqualTo("id", todoId)
             .whereEqualTo("userId", userId)
             .snapshots()
-            .map { it.documents.firstOrNull()?.toObject(FirebaseTodoDto::class.java)?.toDomain() }
+            .map { it.documents.firstOrNull()?.toObject(TodoEntity::class.java)?.toDomain() }
     }
 
     override suspend fun insert(todo: Todo): Long {
         val newTodoId = System.currentTimeMillis()
-        val dto = todo.copy(id = newTodoId.toInt()).toFirebaseDto()
-        todoCollection.add(dto).await()
+        val entity = todo.copy(id = newTodoId.toInt()).toEntity()
+        todoCollection.add(entity).await()
         return newTodoId
     }
 
@@ -62,7 +62,7 @@ class FirebaseTodoRepositoryImpl @Inject constructor(
             .await()
         
         snapshot.documents.forEach { doc ->
-            doc.reference.set(todo.toFirebaseDto()).await()
+            doc.reference.set(todo.toEntity()).await()
         }
     }
 

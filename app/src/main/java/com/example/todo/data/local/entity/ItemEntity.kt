@@ -18,9 +18,9 @@ import androidx.room.PrimaryKey
 data class ItemEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val userId: Int,
-    val name: String,
-    val description: String,
+    val userId: Int = 0,
+    val name: String = "",
+    val description: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

@@ -1,8 +1,8 @@
-package com.example.todo.data.repository
+package com.example.todo.data.repository.firebase
 
+import com.example.todo.data.local.entity.ItemEntity
 import com.example.todo.data.mapper.toDomain
-import com.example.todo.data.mapper.toFirebaseDto
-import com.example.todo.data.remote.dto.FirebaseItemDto
+import com.example.todo.data.mapper.toEntity
 import com.example.todo.domain.model.Item
 import com.example.todo.domain.model.ItemStats
 import com.example.todo.domain.repository.ItemRepository
@@ -26,7 +26,7 @@ class FirebaseItemRepositoryImpl @Inject constructor(
             .whereEqualTo("userId", userId)
             .snapshots()
             .map { snapshot ->
-                snapshot.documents.mapNotNull { it.toObject(FirebaseItemDto::class.java)?.toDomain() }
+                snapshot.documents.mapNotNull { it.toObject(ItemEntity::class.java)?.toDomain() }
             }
     }
 
@@ -54,7 +54,7 @@ class FirebaseItemRepositoryImpl @Inject constructor(
                     .get()
                     .await()
                     .documents
-                    .mapNotNull { it.toObject(FirebaseItemDto::class.java)?.toDomain() }
+                    .mapNotNull { it.toObject(ItemEntity::class.java)?.toDomain() }
             }
     }
 
@@ -66,20 +66,20 @@ class FirebaseItemRepositoryImpl @Inject constructor(
             .await()
             .documents
             .firstOrNull()
-            ?.toObject(FirebaseItemDto::class.java)
+            ?.toObject(ItemEntity::class.java)
             ?.toDomain()
     }
 
     override suspend fun insert(item: Item): Long {
         val newItemId = System.currentTimeMillis()
-        val dto = item.copy(id = newItemId.toInt()).toFirebaseDto()
-        itemCollection.add(dto).await()
+        val entity = item.copy(id = newItemId.toInt()).toEntity()
+        itemCollection.add(entity).await()
         return newItemId
     }
 
     override suspend fun update(item: Item) {
         val snapshot = itemCollection.whereEqualTo("id", item.id).get().await()
-        snapshot.documents.forEach { it.reference.set(item.toFirebaseDto()).await() }
+        snapshot.documents.forEach { it.reference.set(item.toEntity()).await() }
     }
 
     override suspend fun delete(item: Item) {
