@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "ba.edu.ibu"
+    namespace = "com.example.todo"
     compileSdk = 36
 
     defaultConfig {
@@ -19,7 +19,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("boolean", "USE_FIREBASE", "true")
+        buildConfigField("boolean", "USE_FIREBASE", "false")
 
     }
 

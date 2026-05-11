@@ -1,6 +1,6 @@
 package com.example.todo.di
 
-import ba.edu.ibu.BuildConfig
+import com.example.todo.BuildConfig
 import com.example.todo.data.repository.firebase.FirebaseItemRepositoryImpl
 import com.example.todo.data.repository.firebase.FirebaseTagRepositoryImpl
 import com.example.todo.data.repository.firebase.FirebaseTodoRepositoryImpl
