@@ -19,7 +19,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("boolean", "USE_FIREBASE", "false")
+        buildConfigField("boolean", "USE_FIREBASE", "true")
 
     }
 
@@ -88,6 +88,9 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     // Tests
     testImplementation(libs.junit)

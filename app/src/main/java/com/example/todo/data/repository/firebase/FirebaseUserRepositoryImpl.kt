@@ -3,12 +3,15 @@ package com.example.todo.data.repository.firebase
 import com.example.todo.data.local.entity.UserEntity
 import com.example.todo.data.session.SessionManager
 import com.example.todo.domain.repository.UserRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class FirebaseUserRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
+    private val auth: FirebaseAuth,
     private val sessionManager: SessionManager
 ) : UserRepository {
 
@@ -57,5 +60,38 @@ class FirebaseUserRepositoryImpl @Inject constructor(
 
         sessionManager.saveSession(userEntity.id, username)
         return Result.success(Unit)
+    }
+
+    override suspend fun signInWithGoogle(idToken: String): Result<Unit> {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val authResult = auth.signInWithCredential(credential).await()
+            val user = authResult.user ?: return Result.failure(Exception("Google sign-in failed"))
+            
+            val userId = user.uid.hashCode()
+            val username = user.displayName ?: user.email ?: "Google User"
+            val photoUrl = user.photoUrl?.toString()
+            
+            // For Google Sign-In, we still use the user entity pattern to keep consistency with the app
+            val userEntity = UserEntity(
+                id = userId,
+                username = username,
+                password = "", // No password for Google users
+                profilePictureUrl = photoUrl
+            )
+            
+            // Check if user exists in our Firestore 'users' collection
+            val existing = usersCollection.whereEqualTo("id", userId).get().await()
+            if (existing.isEmpty) {
+                usersCollection.add(userEntity).await()
+            }
+            
+            android.util.Log.d("FirebaseUserRepo", "Saving session for user: $username (ID: $userId, Photo: $photoUrl)")
+            sessionManager.saveSession(userId, username, photoUrl)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("FirebaseUserRepo", "Google sign-in error", e)
+            Result.failure(e)
+        }
     }
 }

@@ -31,6 +31,9 @@ class AuthViewModel @Inject constructor(
     val loggedInUsername: StateFlow<String?> = sessionManager.username
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), sessionManager.loggedInUsername)
 
+    val profilePictureUrl: StateFlow<String?> = sessionManager.profilePictureUrl
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), sessionManager.loggedInProfilePictureUrl)
+
     fun onToggleMode() {
         _uiState.update { it.copy(isLoginMode = !it.isLoginMode, errorMessage = null) }
     }
@@ -53,6 +56,21 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val result = userRepository.register(username, password)
             result.onFailure { e -> _uiState.update { it.copy(errorMessage = e.message) } }
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    fun onGoogleSignIn(idToken: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val result = userRepository.signInWithGoogle(idToken)
+            result.onFailure { e -> 
+                android.util.Log.e("AuthViewModel", "Google Sign-In failed", e)
+                _uiState.update { it.copy(errorMessage = e.message) } 
+            }
+            result.onSuccess {
+                android.util.Log.d("AuthViewModel", "Google Sign-In successful")
+            }
             _uiState.update { it.copy(isLoading = false) }
         }
     }

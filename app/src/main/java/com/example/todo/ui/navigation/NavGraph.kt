@@ -11,7 +11,12 @@ import com.example.todo.ui.features.item_form.ItemFormScreen
 import com.example.todo.ui.features.todo_detail.TodoDetailScreen
 
 @Composable
-fun NavGraph(navController: NavHostController, username: String?, onLogout: () -> Unit) {
+fun NavGraph(
+    navController: NavHostController,
+    username: String?,
+    profilePictureUrl: String?,
+    onLogout: () -> Unit
+) {
     NavHost(
         navController = navController,
         startDestination = "main"
@@ -19,10 +24,8 @@ fun NavGraph(navController: NavHostController, username: String?, onLogout: () -
         composable("main") {
             MainScreen(
                 username = username,
+                profilePictureUrl = profilePictureUrl,
                 onLogout = onLogout
-                // If we want to navigate from MainScreen to Detail, 
-                // we'd pass navigation lambdas here.
-                // For now, MainScreen is self-contained with its tabs.
             )
         }
 

@@ -36,4 +36,8 @@ class UserRepositoryImpl @Inject constructor(
         sessionManager.saveSession(user.id, username)
         return Result.success(Unit)
     }
+
+    override suspend fun signInWithGoogle(idToken: String): Result<Unit> {
+        return Result.failure(UnsupportedOperationException("Google Sign-In is only supported with Firebase"))
+    }
 }

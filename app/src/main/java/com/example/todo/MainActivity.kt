@@ -23,9 +23,14 @@ class MainActivity : ComponentActivity() {
                 val authViewModel: AuthViewModel = hiltViewModel()
                 val isLoggedIn by authViewModel.isLoggedIn.collectAsStateWithLifecycle()
                 val username by authViewModel.loggedInUsername.collectAsStateWithLifecycle()
+                val profilePictureUrl by authViewModel.profilePictureUrl.collectAsStateWithLifecycle()
 
                 if (isLoggedIn) {
-                    MainScreen(username = username, onLogout = { authViewModel.onLogout() })
+                    MainScreen(
+                        username = username,
+                        profilePictureUrl = profilePictureUrl,
+                        onLogout = { authViewModel.onLogout() }
+                    )
                 } else {
                     AuthScreen(viewModel = authViewModel)
                 }
