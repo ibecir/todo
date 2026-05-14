@@ -46,14 +46,14 @@ The **Repository** acts as the translator. Because the `ViewModel` and `UI` only
 
 ## 4. Dependency Injection: The "Switchboard"
 
-We use **Hilt** to manage how these layers connect. The file `di/RepositoryModule.kt` acts as the master switchboard.
+We use **Hilt** to manage how these layers connect. The files in the `di/` package (like `RepositoryModule.kt`, `DatabaseModule.kt`, `NetworkModule.kt`, and `FirebaseModule.kt`) act as the master switchboard.
 
 ### The "Swapping Database" Scenario
 If we need to move from **Local Room** storage to a **Remote Cloud API**:
 1.  **Old Way (Hard):** You'd have to rewrite every ViewModel and UI screen.
 2.  **Clean Way (Easy):** 
     - Create a new implementation of the Repository interface (e.g., `ItemRepositoryRemoteImpl`).
-    - Change **one line** in `RepositoryModule.kt` to point to the new class.
+    - Change **the binding** in `RepositoryModule.kt` to point to the new class.
     - **Result:** The ViewModels and UI continue to work perfectly without knowing anything changed.
 
 ---
@@ -63,23 +63,36 @@ If we need to move from **Local Room** storage to a **Remote Cloud API**:
 ```text
 com.example.todo/
 ├── data/                    # DATA LAYER (Implementation)
-│   ├── local/               # Room database, DAOs, and Entities
-│   ├── remote/              # Retrofit API interfaces and DTOs
-│   ├── repository/          # The "Workers" that implement the Domain contracts
+│   ├── local/               # Room database configuration
+│   │   ├── dao/             # Room Data Access Objects
+│   │   └── entity/          # Database Tables (Entities)
+│   ├── remote/              # Network communication
+│   │   ├── dto/             # Data Transfer Objects (JSON models)
+│   │   └── services/        # Retrofit API interfaces
+│   ├── repository/          # Concrete implementations of Domain contracts
+│   │   ├── firebase/        # Firebase Realtime Database implementations
+│   │   ├── mars/            # External API implementations (Mars photos)
+│   │   └── room/            # Local Room database implementations
 │   ├── mapper/              # Mappers (Conversion between Entity/DTO and Domain)
 │   └── session/             # Local session management (SharedPreferences)
 │
 ├── domain/                  # DOMAIN LAYER (Business Logic)
-│   ├── model/               # The "Universal Translator" models
+│   ├── model/               # The "Universal Translator" models (POJOs)
 │   └── repository/          # The "Contracts" (Interfaces)
 │
 ├── ui/                      # PRESENTATION LAYER (UI)
-│   ├── features/            # Feature-based organization (auth, todos, items, etc.)
+│   ├── features/            # Feature-based screens (auth, todos, stats, etc.)
 │   ├── navigation/          # Compose Navigation (NavGraph, Screen routes)
-│   ├── common/              # Shared UI components
-│   └── theme/               # Design system (Color, Typography)
+│   ├── common/              # Shared UI components and logic
+│   └── theme/               # Design system (Color, Typography, Theme)
 │
 ├── di/                      # THE SWITCHBOARD (Hilt Modules)
+│   ├── AppModule.kt
+│   ├── DatabaseModule.kt
+│   ├── FirebaseModule.kt
+│   ├── NetworkModule.kt
+│   └── RepositoryModule.kt
+│
 └── MainActivity.kt          # Entry point
 ```
 
