@@ -10,11 +10,11 @@ A simple Todo application built with Kotlin, Jetpack Compose, Room, Hilt, and Co
 
 ```
 UI (Compose screens)
-    ↕  StateFlow / NavigationEvent
+    ↕  StateFlow (data class state)
 ViewModel
-    ↕  suspend functions / Flow
+    ↕  suspend functions / Flow<T> / Flow<DTO>
 Repository
-    ↕  suspend functions / Flow
+    ↕  suspend functions / Flow<T> / Flow<DTO>
 DAO
     ↕  SQLite (Room generates the implementation)
 Database (Room)
@@ -22,186 +22,332 @@ Database (Room)
 
 ---
 
-### 1. Room / DAO — the database layer
+### 1. Database schema
 
-**`TodoDatabase`** is an abstract class. Room generates a concrete implementation at compile time (via KSP) that handles SQLite connections, thread safety, and query execution.
+Three tables with a many-to-many relationship between `todos` and `items`:
 
-**`TodoDao`** is an interface. Every method has two shapes:
-
-```kotlin
-// Returns a Flow — NOT suspend. Room keeps the query "alive".
-@Query("SELECT * FROM todos ORDER BY id DESC")
-fun getAllTodos(): Flow<List<TodoEntity>>
-
-// suspend — runs once, then returns.
-@Insert suspend fun insert(todo: TodoEntity)
-@Update suspend fun update(todo: TodoEntity)
-@Delete suspend fun delete(todo: TodoEntity)
+```
+todos                    todo_items              items
+─────────────────        ────────────────────────         ────────────────────────
+id          INT (PK)     todoId  INT  (FK → todos)        id           INT (PK)
+title       TEXT         itemId  INT  (FK → items)        name         TEXT
+isCompleted INT          [CASCADE DELETE on both]         description  TEXT
+                                                          createdAt    LONG
+                                                          updatedAt    LONG
 ```
 
-**Why `Flow` for the query, `suspend` for writes?**
-
-- `Flow` is a *stream*. Room emits a new list every time the table changes. The subscriber (Repository → ViewModel) always has a live view of the data without polling.
-- `suspend` for writes means "do this one async operation, then I'm done." No ongoing stream needed.
-
-**Threading**: Room's generated code automatically executes all database work on an internal `Dispatchers.IO` thread pool. You never have to say `withContext(Dispatchers.IO)` yourself for Room operations.
+Deleting a todo automatically removes its cross-ref rows. Deleting an item removes it from every todo it was assigned to — enforced by Room's `ForeignKey.CASCADE`.
 
 ---
 
-### 2. Repository — the single source of truth
+### 2. Entities vs DTOs
+
+The project uses two different kinds of model classes:
+
+#### Entities — one per database table
+
+Annotated with `@Entity`. Room uses these to create and migrate tables. They represent a full row.
+
+```kotlin
+@Entity(tableName = "todos")
+data class TodoEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val title: String,
+    val isCompleted: Boolean = false
+)
+```
+
+#### DTOs (Data Transfer Objects) — shaped for a specific use case
+
+Plain `data class` with **no** Room annotations. Room maps aggregate query results directly into these by matching SQL column aliases to property names. They carry only the data a specific consumer needs — nothing more.
+
+```kotlin
+// model/dto/TodoStatsDto.kt
+data class TodoStatsDto(
+    val totalCount: Int,
+    val completedCount: Int,
+    val pendingCount: Int
+)
+
+// model/dto/ItemStatsDto.kt
+data class ItemStatsDto(
+    val totalCount: Int,
+    val assignedCount: Int   // items linked to at least one todo
+)
+```
+
+Key difference: an Entity is the shape of a table row. A DTO is the shape of a query result — it can span multiple tables, contain computed columns, and omit columns that aren't needed.
+
+---
+
+### 3. DAO — queries and aggregate functions
+
+**`TodoDao`** and **`ItemDao`** are interfaces. Room generates the concrete implementations at compile time via KSP.
+
+#### Standard queries — return `Flow<Entity>`
+
+```kotlin
+// Room keeps the query "alive" — emits a new list every time the table changes
+@Query("SELECT * FROM todos ORDER BY id DESC")
+fun getAllTodos(): Flow<List<TodoEntity>>
+
+// Writes run once and return
+@Insert(onConflict = OnConflictStrategy.REPLACE)
+suspend fun insert(todo: TodoEntity)
+
+@Update
+suspend fun update(todo: TodoEntity)
+
+@Delete
+suspend fun delete(todo: TodoEntity)
+```
+
+#### Aggregate queries — return `Flow<DTO>`
+
+Room maps each column alias in the SELECT directly to the matching property name in the DTO.
+
+```kotlin
+// TodoDao — maps to TodoStatsDto
+@Query("""
+    SELECT
+        COUNT(*)                                           AS totalCount,
+        SUM(CASE WHEN isCompleted = 1 THEN 1 ELSE 0 END)  AS completedCount,
+        SUM(CASE WHEN isCompleted = 0 THEN 1 ELSE 0 END)  AS pendingCount
+    FROM todos
+""")
+fun getTodoStats(): Flow<TodoStatsDto>
+
+// ItemDao — maps to ItemStatsDto
+@Query("""
+    SELECT
+        COUNT(*)                                                    AS totalCount,
+        (SELECT COUNT(DISTINCT itemId) FROM todo_items)   AS assignedCount
+    FROM items
+""")
+fun getItemStats(): Flow<ItemStatsDto>
+```
+
+Because these are `Flow`, the Stats screen updates automatically whenever any insert, update, or delete occurs on the underlying tables — no manual refresh needed.
+
+**Threading**: Room executes all queries on an internal `Dispatchers.IO` thread pool. You never write `withContext(Dispatchers.IO)` for Room calls.
+
+---
+
+### 4. Repository — single source of truth
+
+Repositories wrap DAOs and expose data upward. The ViewModel never touches a DAO directly.
 
 ```kotlin
 class TodoRepository @Inject constructor(private val todoDao: TodoDao) {
     val todos: Flow<List<TodoEntity>> = todoDao.getAllTodos()
+    val todoStats: Flow<TodoStatsDto>  = todoDao.getTodoStats()   // ← DTO flow
 
     suspend fun insert(todo: TodoEntity) = todoDao.insert(todo)
     suspend fun update(todo: TodoEntity) = todoDao.update(todo)
     suspend fun delete(todo: TodoEntity) = todoDao.delete(todo)
+    fun getTodoById(todoId: Int): Flow<TodoEntity?> = todoDao.getTodoById(todoId)
 }
 ```
 
-It's a thin wrapper here, but its role is important:
+```kotlin
+class ItemRepository @Inject constructor(private val itemDao: ItemDao) {
+    val allItems: Flow<List<ItemEntity>> = itemDao.getAllItems()
+    val itemStats: Flow<ItemStatsDto>    = itemDao.getItemStats()  // ← DTO flow
 
-- **Hides the data source** from the ViewModel. The ViewModel doesn't know or care that data comes from Room. If you later add a network sync, you swap logic here only.
-- **`val todos`** is initialised once — it's just the DAO's `Flow` re-exposed. No data is fetched at construction time; the Flow is cold until collected.
-- All `suspend` functions simply delegate to the DAO. The DAO is already on `IO`, so no explicit dispatcher switching needed.
+    suspend fun insert(item: ItemEntity): Long = itemDao.insert(item)
+    suspend fun update(item: ItemEntity) = itemDao.update(item)
+    suspend fun delete(item: ItemEntity) = itemDao.delete(item)
+    fun getItemsForTodo(todoId: Int): Flow<List<ItemEntity>> = itemDao.getItemsForTodo(todoId)
+    suspend fun addItemToTodo(todoId: Int, itemId: Int) = ...
+    suspend fun removeItemFromTodo(todoId: Int, itemId: Int) = ...
+}
+```
 
 ---
 
-### 3. ViewModel — state and business logic
+### 5. ViewModel — state and business logic
 
-Each screen has its own ViewModel. Both follow the exact same structure:
-
-```
-@HiltViewModel
-class TodoListViewModel @Inject constructor(repository) : ViewModel()
-    │
-    ├── _uiState: MutableStateFlow       ← what the UI renders
-    ├── _navigationEvent: Channel        ← one-shot navigation triggers
-    │
-    ├── init { viewModelScope.launch { repository.todos.collect {...} } }
-    └── fun onDelete / onToggle / onAdd  → viewModelScope.launch { repository.xxx() }
-```
-
-**`viewModelScope`** is a `CoroutineScope` tied to the ViewModel's lifecycle. When the ViewModel is cleared (screen permanently gone), all coroutines in this scope are cancelled automatically. You never leak a running database query.
-
-**Dispatcher context for ViewModels**: `viewModelScope` runs on `Dispatchers.Main` by default. This is intentional — updating `StateFlow` from a background thread would require thread-safe handling. Instead:
+ViewModels own a single `MutableStateFlow<UiState>` that holds everything the screen needs to render. State is a plain `data class`, not a sealed interface — because there is no loading/error/success branching; the screen always renders whatever data is available.
 
 ```kotlin
-viewModelScope.launch {          // Main thread
-    repository.todos.collect {   // Flow emission arrives here...
-        _uiState.value = ...     // ...safely updated on Main
+data class TodosUiState(
+    val todos: List<TodoEntity>          = emptyList(),
+    val selectedTodo: TodoEntity?        = null,   // drives the bottom sheet
+    val selectedTodoItems: List<ItemEntity> = emptyList(),
+    val allItems: List<ItemEntity>       = emptyList(),
+    val isAddTodoDialogOpen: Boolean     = false
+)
+```
+
+#### Partial state updates with `update {}`
+
+Instead of replacing the whole state on every change, `MutableStateFlow.update {}` atomically copies only the fields that changed:
+
+```kotlin
+_uiState.update { it.copy(todos = newList) }
+// The other fields (allItems, selectedTodo, etc.) are preserved exactly as they were.
+```
+
+This is important when multiple coroutines update the same StateFlow concurrently — `update {}` is thread-safe and prevents one coroutine from overwriting another's changes.
+
+#### Multiple independent collectors in `init {}`
+
+`TodosViewModel` has three separate coroutines, each responsible for one data source:
+
+```kotlin
+init {
+    // 1. Todos list — always live
+    viewModelScope.launch {
+        todoRepository.todos.collect { todos ->
+            _uiState.update { it.copy(todos = todos,
+                selectedTodo = todos.find { t -> t.id == _selectedTodoId.value }) }
+        }
+    }
+
+    // 2. Items for the currently open todo — switches reactively with flatMapLatest
+    viewModelScope.launch {
+        _selectedTodoId
+            .flatMapLatest { id ->
+                if (id != null) itemRepository.getItemsForTodo(id)
+                else flowOf(emptyList())
+            }
+            .collect { items -> _uiState.update { it.copy(selectedTodoItems = items) } }
+    }
+
+    // 3. All items — needed to populate the assignment sheet checkboxes
+    viewModelScope.launch {
+        itemRepository.allItems.collect { items ->
+            _uiState.update { it.copy(allItems = items) }
+        }
     }
 }
 ```
 
-Room emits on its IO thread, but coroutines' `collect` automatically delivers the value to the calling coroutine's context (Main here). No manual `withContext` needed.
+#### `flatMapLatest` — switching between flows
 
-For writes:
+`_selectedTodoId` is itself a `MutableStateFlow<Int?>`. When the user taps a todo, `_selectedTodoId.value` is updated. `flatMapLatest` cancels the previous inner flow (items for the old todo) and starts a new one (items for the newly selected todo). The UI always shows the correct item list without any manual refresh.
+
+```
+_selectedTodoId emits 3   →  subscribes to getItemsForTodo(3)  → emits [Item A, Item B]
+_selectedTodoId emits 7   →  cancels getItemsForTodo(3)
+                          →  subscribes to getItemsForTodo(7)  → emits [Item C]
+_selectedTodoId emits null →  cancels getItemsForTodo(7)
+                           →  subscribes to flowOf(emptyList()) → emits []
+```
+
+#### Stats ViewModel — two independent collectors, two DTOs
+
 ```kotlin
-viewModelScope.launch {          // Main
-    repository.delete(todo)      // suspends → Room switches to IO internally
-                                 // resumes here on Main when done
+init {
+    viewModelScope.launch {
+        todoRepository.todoStats.collect { dto ->
+            _uiState.update { it.copy(todoStats = dto) }
+        }
+    }
+    viewModelScope.launch {
+        itemRepository.itemStats.collect { dto ->
+            _uiState.update { it.copy(itemStats = dto) }
+        }
+    }
 }
 ```
 
----
-
-### 4. Two kinds of state: `StateFlow` vs `Channel`
-
-These solve two different problems:
-
-**`StateFlow<UiState>`** — *what is the current screen state?*
-
-```kotlin
-private val _uiState = MutableStateFlow<TodoListUiState>(TodoListUiState.Loading)
-val uiState: StateFlow<TodoListUiState> = _uiState.asStateFlow()
-```
-
-- Always holds a value (starts with `Loading`).
-- New subscribers immediately get the latest value — like a LiveData.
-- The UI collects this and re-renders whenever it changes.
-- Perfect for: loading spinners, list content, error messages.
-
-**`Channel<NavigationEvent>`** — *did something happen once?*
-
-```kotlin
-private val _navigationEvent = Channel<NavigationEvent>(Channel.BUFFERED)
-val navigationEvent: Flow<NavigationEvent> = _navigationEvent.receiveAsFlow()
-```
-
-- Delivers events exactly once, even if the UI subscribes late (`BUFFERED` queues them).
-- After consumed, the event is gone — no risk of navigating twice on re-subscription.
-- Perfect for: navigate to screen, show snackbar, close screen.
-
-If you used `StateFlow` for navigation, a screen rotation would re-trigger the navigation because the subscriber would re-receive the last value.
+The DTOs arrive independently. If only the item table changes, only `itemStats` emits — the todo stats are untouched.
 
 ---
 
-### 5. UI layer — Compose screens
+### 6. Communication flow — full round-trips
 
-Each screen follows a **container + content** split:
-
-```
-TodoListScreen()                        ← container: owns ViewModel, handles side effects
-    │
-    ├── collectAsStateWithLifecycle()   ← observes StateFlow, lifecycle-safe
-    ├── LaunchedEffect(Unit)            ← collects navigation Channel once
-    │
-    └── TodoListContent()              ← pure UI, no ViewModel reference
-            ├── TodoItem()
-            └── ...
-```
-
-**`collectAsStateWithLifecycle()`** vs plain `collectAsState()`:**
-The lifecycle-aware version stops collecting when the app goes to background, preventing wasted recompositions and battery drain.
-
-**`LaunchedEffect(Unit)`** runs once when the composable enters the composition and cancels when it leaves. It's where the navigation Channel is collected — ensuring it lives as long as the screen is visible.
-
----
-
-### 6. Dependency injection (Hilt)
-
-The wiring chain is:
+#### User toggles an item's assignment to a todo
 
 ```
-@HiltAndroidApp TodoApp         ← creates the Hilt component graph at app start
-    │
-    └── DatabaseModule          ← @Singleton: one Database, one DAO for the app's life
-            provides TodoDatabase
-            provides TodoDao
-            │
-            └── TodoRepository  ← @Inject constructor, Hilt knows how to build it
-                    │
-                    └── TodoListViewModel / AddTodoViewModel  ← @HiltViewModel
-                            │
-                            └── injected via hiltViewModel() in each screen
-```
-
-`@Singleton` on the Database means Room opens the SQLite file once and reuses the same connection everywhere. If it weren't singleton, you'd get multiple database handles which can cause corruption.
-
----
-
-### Data flow for a full user interaction
-
-**User checks off a todo:**
-
-```
-1.  User taps Checkbox in TodoItem (UI)
-2.  onToggleComplete(todo) callback fires
-3.  TodoListViewModel.onToggleComplete(todo) called (Main thread)
-4.  viewModelScope.launch { ... }
-5.  repository.update(todo.copy(isCompleted = true))
-6.  todoDao.update(...) — Room switches to IO thread, executes UPDATE SQL
-7.  Room detects table change, emits new List<TodoEntity> on the Flow
-8.  ViewModel's collect{} receives the new list (back on Main)
-9.  _uiState.value = TodoListUiState.Success(newList)
-10. StateFlow notifies collector in Compose
+1.  User taps a Checkbox in the bottom sheet (UI)
+2.  onToggleItem(item) callback fires
+3.  TodosViewModel.onToggleItem(item) — checks if item is currently assigned
+4.  viewModelScope.launch { itemRepository.addItemToTodo(todoId, item.id) }
+         OR  itemRepository.removeItemFromTodo(todoId, item.id)
+5.  Room executes INSERT/DELETE on todo_items (IO thread)
+6.  Room detects the change, re-runs getItemsForTodo(todoId) query
+7.  New List<ItemEntity> emitted on the Flow
+8.  flatMapLatest collector receives the list (back on Main)
+9.  _uiState.update { it.copy(selectedTodoItems = newList) }
+10. StateFlow notifies Compose collector
 11. collectAsStateWithLifecycle() triggers recomposition
-12. LazyColumn redraws with updated item (strikethrough text)
+12. Checkboxes re-render with correct checked state
 ```
 
-The whole round-trip is reactive — you never manually refresh the list.
+#### Stats update after a todo is completed
+
+```
+1.  User taps a Checkbox on a TodoRow (UI)
+2.  onToggleComplete(todo) fires
+3.  TodosViewModel: repository.update(todo.copy(isCompleted = true))
+4.  Room executes UPDATE on todos table (IO thread)
+5a. getAllTodos() Flow emits new list   → todos collector updates TodosUiState.todos
+5b. getTodoStats() Flow emits new DTO  → StatsViewModel stats collector updates StatsUiState.todoStats
+    (both happen independently and concurrently)
+6.  Each StateFlow notifies its own Compose collector
+7.  TodosScreen re-renders the list (strikethrough applied)
+8.  StatsScreen re-renders the progress bar and percentages
+```
+
+Both screens react to the same underlying database change with no shared state between their ViewModels — the database is the single source of truth.
+
+---
+
+### 7. UI layer — flat bottom navigation
+
+No deep navigation stack. Three permanent tabs managed by a single `var selectedTab` integer in `MainScreen`. ViewModels are activity-scoped (obtained via `hiltViewModel()` at the `MainScreen` level) and survive tab switches.
+
+```
+MainScreen
+├── NavigationBar
+│   ├── 🏠 Todos (tab 0)
+│   ├── ⭐ Items  (tab 1)
+│   └── ℹ️ Stats  (tab 2)
+│
+├── Tab 0 — TodosScreen
+│   ├── LazyColumn of TodoRow composables
+│   ├── FAB → AlertDialog (add todo)
+│   └── tap a row → ModalBottomSheet
+│           ├── Todo title header
+│           └── LazyColumn of all items with Checkboxes
+│               checked = assigned to this todo (live via flatMapLatest)
+│
+├── Tab 1 — ItemsScreen
+│   ├── LazyColumn of ItemRow composables
+│   └── FAB / Edit button → AlertDialog (add or edit item)
+│
+└── Tab 2 — StatsScreen
+    └── LazyColumn
+        ├── item { SectionHeader("Todos") }
+        ├── item { StatGroupCard — totalCount / completedCount / pendingCount / progress bar }
+        ├── item { SectionHeader("Items") }
+        └── item { StatGroupCard — totalCount / assignedCount / unassigned / progress bar }
+```
+
+**LazyColumn for rows, Column for card internals**: `LazyColumn` with `items {}` is used for all scrollable lists (todo rows, item rows, stat rows). The layout *inside* a card uses a regular `Column` — nesting a lazy composable inside another lazy composable is not allowed in Compose.
+
+---
+
+### 8. Dependency injection (Hilt)
+
+```
+@HiltAndroidApp TodoApp
+    │
+    └── DatabaseModule  (@Singleton)
+            ├── provides TodoDatabase   (one SQLite connection for the whole app)
+            ├── provides TodoDao        (@Singleton — thin proxy, safe to share)
+            └── provides ItemDao        (@Singleton)
+                    │
+                    ├── TodoRepository  (@Inject constructor — Hilt builds it automatically)
+                    │       consumed by: TodosViewModel, StatsViewModel
+                    │
+                    └── ItemRepository  (@Inject constructor)
+                            consumed by: TodosViewModel, ItemsViewModel, StatsViewModel
+```
+
+All three ViewModels are `@HiltViewModel`. Hilt injects the repositories automatically when Compose calls `hiltViewModel<XyzViewModel>()`.
 
 ---
 
@@ -210,36 +356,54 @@ The whole round-trip is reactive — you never manually refresh the list.
 | Layer | Library |
 |---|---|
 | UI | Jetpack Compose + Material 3 |
-| Navigation | Navigation Compose |
-| State management | StateFlow + Channel (Coroutines) |
+| State management | StateFlow + `update {}` (Coroutines) |
 | Dependency injection | Hilt |
 | Database | Room |
-| Async | Kotlin Coroutines |
+| Async | Kotlin Coroutines (`viewModelScope`, `flatMapLatest`, `combine`) |
 | Annotation processing | KSP |
+
+---
 
 ## Package structure
 
 ```
 com.example.todo/
-├── TodoApp.kt                              @HiltAndroidApp Application
-├── MainActivity.kt                         @AndroidEntryPoint, NavGraph entry
+├── TodoApp.kt                                    @HiltAndroidApp
+├── MainActivity.kt                               @AndroidEntryPoint
 ├── di/
-│   └── DatabaseModule.kt                   Hilt module: provides DB + DAO
+│   └── DatabaseModule.kt                         provides DB, TodoDao, ItemDao
 ├── model/
+│   ├── dto/
+│   │   ├── TodoStatsDto.kt                       aggregate query result (completed/pending counts)
+│   │   └── ItemStatsDto.kt                       aggregate query result (total/assigned counts)
 │   ├── local/
-│   │   ├── entity/TodoEntity.kt            @Entity — Room table definition
-│   │   ├── dao/TodoDao.kt                  @Dao — queries and mutations
-│   │   └── TodoDatabase.kt                 @Database — RoomDatabase
+│   │   ├── entity/
+│   │   │   ├── TodoEntity.kt                     @Entity — todos table
+│   │   │   ├── ItemEntity.kt                     @Entity — items table
+│   │   │   ├── TodoItems.kt               @Entity — junction table (many-to-many)
+│   │   │   └── TodoWithItems.kt                  @Relation POJO (unused in UI, available for queries)
+│   │   ├── dao/
+│   │   │   ├── TodoDao.kt                        CRUD + getTodoStats() aggregate
+│   │   │   └── ItemDao.kt                        CRUD + getItemStats() aggregate
+│   │   └── TodoDatabase.kt                       @Database version 2
 │   └── repository/
-│       └── TodoRepository.kt               Single source of truth
+│       ├── TodoRepository.kt                     exposes todos + todoStats flows
+│       └── ItemRepository.kt                     exposes allItems + itemStats flows
 └── presentation/
-    ├── navigation/
-    │   ├── Screen.kt                       Sealed class — type-safe routes
-    │   └── NavGraph.kt                     NavHost wiring
-    ├── ui/screens/
-    │   ├── TodoListScreen.kt               List + checkbox + delete + FAB
-    │   └── AddTodoScreen.kt                Text field + save button
+    ├── ui/
+    │   ├── MainScreen.kt                         bottom nav host (3 tabs)
+    │   └── screens/
+    │       ├── TodosScreen.kt                    todos list + bottom sheet assignment
+    │       ├── ItemsScreen.kt                    items CRUD with dialogs
+    │       └── StatsScreen.kt                    LazyColumn of aggregate stat cards
     └── view_model/
-        ├── list/                           ViewModel + UiState + NavigationEvent
-        └── add/                            ViewModel + UiState + NavigationEvent
+        ├── todos/
+        │   ├── TodosUiState.kt                   data class — todos + sheet + dialog state
+        │   └── TodosViewModel.kt                 3 collectors, flatMapLatest for item assignment
+        ├── items/
+        │   ├── ItemsUiState.kt                   data class — items + dialog state
+        │   └── ItemsViewModel.kt                 CRUD + dialog open/close
+        └── stats/
+            ├── StatsUiState.kt                   data class — TodoStatsDto? + ItemStatsDto?
+            └── StatsViewModel.kt                 2 DTO collectors
 ```

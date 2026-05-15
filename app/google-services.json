@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "55865017338",
+    "project_id": "mobile-todo-1234",
+    "storage_bucket": "mobile-todo-1234.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55865017338:android:50cdeb2b70fa240e115a43",
+        "android_client_info": {
+          "package_name": "ba.edu.ibu"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "55865017338-9ihav1nteq45tkpq01d3ppsvfovbtvdb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ba.edu.ibu",
+            "certificate_hash": "d3efc0772f703a505832c59ef0200aaef13d3af4"
+          }
+        },
+        {
+          "client_id": "55865017338-827sats8gi2em9s26klmq7nvg6se6vhu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtM2edImRqxTVOTR0vouqZ5sSE2DeF53k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "55865017338-827sats8gi2em9s26klmq7nvg6se6vhu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
