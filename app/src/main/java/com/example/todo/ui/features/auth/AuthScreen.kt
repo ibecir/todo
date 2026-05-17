@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -31,6 +32,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.todo.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
@@ -41,6 +43,7 @@ fun AuthScreen(viewModel: AuthViewModel) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val credentialManager = CredentialManager.create(context)
+    val serverClientId = stringResource(id = R.string.default_web_client_id)
 
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -110,7 +113,7 @@ fun AuthScreen(viewModel: AuthViewModel) {
                 onClick = {
                     val googleIdOption = GetGoogleIdOption.Builder()
                         .setFilterByAuthorizedAccounts(false)
-                        .setServerClientId(context.getString(com.example.todo.R.string.default_web_client_id))
+                        .setServerClientId(serverClientId)
                         .setAutoSelectEnabled(false)
                         .build()
 
