@@ -13,7 +13,7 @@ import com.example.todo.data.local.entity.UserEntity
 
 @Database(
     entities = [TodoEntity::class, ItemEntity::class, TodoItems::class, UserEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
