@@ -6,6 +6,7 @@ import com.example.todo.data.session.SessionManager
 import com.example.todo.domain.model.ItemStats
 import com.example.todo.domain.model.TodoStats
 import com.example.todo.domain.repository.ItemRepository
+import com.example.todo.domain.repository.StatsRepository
 import com.example.todo.domain.repository.TodoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ import javax.inject.Inject
 class StatsViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val itemRepository: ItemRepository,
+    private val statsRepository: StatsRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
 
@@ -44,5 +46,39 @@ class StatsViewModel @Inject constructor(
                 _uiState.update { it.copy(itemStats = stats) }
             }
         }
+    }
+
+    fun onExportStats() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isExporting = true, exportMessage = null) }
+            
+            val currentState = _uiState.value
+            val result = statsRepository.exportStats(
+                currentState.todoStats, 
+                currentState.itemStats
+            )
+
+            result.onSuccess { uri ->
+                _uiState.update { 
+                    it.copy(
+                        isExporting = false, 
+                        exportMessage = "Stats exported to Downloads",
+                        exportUri = uri
+                    ) 
+                }
+            }.onFailure { e ->
+                _uiState.update { 
+                    it.copy(
+                        isExporting = false, 
+                        exportMessage = "Export failed: ${e.message}",
+                        exportUri = null
+                    ) 
+                }
+            }
+        }
+    }
+
+    fun clearExportMessage() {
+        _uiState.update { it.copy(exportMessage = null, exportUri = null) }
     }
 }

@@ -1,6 +1,7 @@
 package com.example.todo.di
 
 import com.example.todo.BuildConfig
+import com.example.todo.data.repository.StatsRepositoryImpl
 import com.example.todo.data.repository.firebase.FirebaseItemRepositoryImpl
 import com.example.todo.data.repository.firebase.FirebaseTagRepositoryImpl
 import com.example.todo.data.repository.firebase.FirebaseTodoRepositoryImpl
@@ -21,6 +22,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
+
+    @Provides
+    @Singleton
+    fun provideStatsRepository(
+        statsRepositoryImpl: StatsRepositoryImpl
+    ): StatsRepository = statsRepositoryImpl
 
     @Provides
     @Singleton
