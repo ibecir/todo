@@ -192,7 +192,7 @@ private fun TodoRow(
                                 modifier = Modifier
                                     .background(
                                         MaterialTheme.colorScheme.primaryContainer,
-                                        RoundedCornerShape(4.dp)
+                                        MaterialTheme.shapes.extraSmall
                                     )
                                     .padding(horizontal = 4.dp, vertical = 2.dp)
                             )

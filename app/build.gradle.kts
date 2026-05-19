@@ -19,7 +19,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("boolean", "USE_FIREBASE", "false")
+        buildConfigField("boolean", "USE_FIREBASE", "true")
 
     }
 

@@ -168,7 +168,7 @@ private fun TagsSection(tags: List<Tag>) {
                 modifier = Modifier
                     .background(
                         MaterialTheme.colorScheme.primaryContainer,
-                        RoundedCornerShape(4.dp)
+                        MaterialTheme.shapes.extraSmall
                     )
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             )

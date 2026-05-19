@@ -351,6 +351,35 @@ All three ViewModels are `@HiltViewModel`. Hilt injects the repositories automat
 
 ---
 
+## 9. Theming System (Material 3)
+
+The application implements a fully compliant **Material 3 (M3)** design system. It uses an adaptive color strategy and semantic role mapping to ensure visual consistency and robust Dark Mode support.
+
+### Theme Architecture
+
+The theme is managed centrally in `ui/theme/` and follows a "Provider-Consumer" pattern:
+
+1.  **Provider (`TodoTheme`):** Located in `Theme.kt`, this composable wraps the entire application in `MainActivity.kt`. It "plugs in" the project's custom definitions (colors, typography, shapes) into the `MaterialTheme` handle.
+2.  **Definitions:** 
+    *   `Color.kt`: Defines the hex codes for both Light and Dark brand palettes.
+    *   `Type.kt`: Configures the five typography scales (Display, Headline, Title, Body, Label).
+    *   `Shape.kt`: Defines the corner rounding for Extra Small to Extra Large elements.
+3.  **Consumer:** Screens like `AuthScreen.kt` or `TodosScreen.kt` use semantic handles like `MaterialTheme.colorScheme.primary` or `MaterialTheme.typography.bodyLarge`.
+
+### Adaptive Color Selection
+
+The `TodoTheme` selects the color scheme based on the following hierarchy:
+
+*   **Dynamic Color (Android 12+):** If supported, the app pulls colors directly from the user's wallpaper (`dynamicLightColorScheme` or `dynamicDarkColorScheme`).
+*   **Custom Dark Mode:** Fallback for older devices or when system Dark Theme is active.
+*   **Custom Light Mode:** The default fallback using our brand colors.
+
+### Why use `MaterialTheme` instead of custom imports?
+
+By using `MaterialTheme.colorScheme.primary`, the code remains agnostic of the actual hex code. If the app switches to Dark Mode or uses Dynamic Color, the handle automatically resolves to the correct value for that context without changing a single line of UI code.
+
+---
+
 ## Tech stack
 
 | Layer | Library |

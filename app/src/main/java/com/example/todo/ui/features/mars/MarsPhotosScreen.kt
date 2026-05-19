@@ -54,15 +54,20 @@ fun MarsGrid(photos: List<MarsPhoto>) {
 
 @Composable
 fun MarsPhotoCard(photo: MarsPhoto, modifier: Modifier = Modifier) {
-    AsyncImage(
-        model = ImageRequest.Builder(context = LocalContext.current)
-            .data(photo.imgSrc)
-            .crossfade(true)
-            .build(),
-        contentDescription = "Mars Photo",
-        contentScale = ContentScale.Crop,
+    androidx.compose.material3.Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(4.dp)
-    )
+            .padding(4.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context = LocalContext.current)
+                .data(photo.imgSrc)
+                .crossfade(true)
+                .build(),
+            contentDescription = "Mars Photo",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
